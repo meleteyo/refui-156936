@@ -1,0 +1,17 @@
+{
+  "agents": [
+    {
+      "agent_id": "aexec-refui-1fe3576bfb25213e",
+      "agent_type": "exec-refui",
+      "started_at": "2026-07-20T08:21:31.007Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-20T08:29:15.484Z",
+      "duration_ms": 464477
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 1,
+  "total_failed": 0,
+  "last_updated": "2026-07-20T08:29:15.586Z"
+}

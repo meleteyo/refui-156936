@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EDEN OS — 철강 통합 운영 시스템 · 레퍼런스 UI (일반)</title>
+  <meta name="description" content="이든철강 전용 통합 운영 시스템(EDEN OS) — 철을 알뜰하게 잘라 버리는 자재를 줄이고, 수주부터 최종 손익까지 한 화면에서. 기술 용어 없이 동작과 효과 중심의 일반 고객용 레퍼런스 UI." />
+  <meta property="og:title" content="EDEN OS — 철강 통합 운영 시스템 (일반)" />
+  <meta property="og:type" content="website" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Pretendard Variable"', 'Pretendard', 'system-ui', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] } } } };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="./styles.css" />
+
+  <style>
+    :root { --project-id: 156936; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+      background: #020617; color: #f1f5f9; -webkit-font-smoothing: antialiased;
+    }
+    .aurora-bg { position: fixed; inset: 0; z-index: -10; background: #020617; }
+    .aurora-bg::before {
+      content: ''; position: absolute; inset: 0; opacity: 0.42;
+      background:
+        radial-gradient(at 15% 22%, rgba(99,102,241,0.35), transparent 50%),
+        radial-gradient(at 85% 72%, rgba(20,184,166,0.26), transparent 50%),
+        radial-gradient(at 52% 48%, rgba(56,189,248,0.14), transparent 45%);
+    }
+    @supports (animation-timeline: view()) {
+      .scroll-reveal { animation: slideUp 0.8s ease-out; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+    .nest-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+    .nest-flange { background: linear-gradient(180deg, rgba(99,102,241,0.85), rgba(79,70,229,0.7)); }
+    .nest-web { background: linear-gradient(180deg, rgba(20,184,166,0.85), rgba(13,148,136,0.7)); }
+    .nest-scrap { background-image: repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 4px, rgba(148,163,184,0.12) 4px, rgba(148,163,184,0.12) 8px); }
+    .nest-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #f8fafc; border-right: 1px solid rgba(2,6,23,0.4); }
+    .nest-seg:last-child { border-right: none; }
+    .flow-step { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; }
+  </style>
+</head>
+
+<body data-client-type="nonit" data-domain="steel">
+  <div class="aurora-bg" aria-hidden="true"></div>
+
+  <!-- =========== HEADER =========== -->
+  <header class="sticky top-0 z-20 backdrop-blur-xl bg-slate-950/70 border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+      <a href="#top" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-teal-500 to-cyan-400 shadow-lg shadow-indigo-500/30"></div>
+        <div class="hidden sm:block">
+          <div class="font-bold text-base leading-tight">EDEN OS</div>
+          <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5"><span>이든철강 통합 운영 시스템</span></div>
+        </div>
+      </a>
+
+      <!-- 비즈니스 성과 뱃지 (비IT) -->
+      <div class="hidden xl:flex items-center gap-2 text-[11px]">
+        <span class="rounded-full px-2.5 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-300">버리는 철 최소화</span>
+        <span class="rounded-full px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">수율 평균 96%</span>
+        <span class="rounded-full px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">환율 자동 반영</span>
+        <span class="rounded-full px-2.5 py-1 bg-white/5 border border-white/10 text-slate-300">22년 경력</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="cmdk-trigger" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i><span>메뉴</span>
+          <kbd class="font-mono text-xs px-1.5 py-0.5 rounded bg-white/10 text-slate-300">⌘K</kbd>
+        </button>
+        <a href="../it.html" class="hidden md:inline-flex rounded-xl px-3 py-2 text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition">IT 담당자용 →</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========== HERO =========== -->
+  <section id="top" class="relative max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-10">
+    <div class="max-w-4xl">
+      <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 mb-6">
+        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span>
+        일반 고객용 · 쉬운 설명 버전
+      </div>
+
+      <h1 class="text-4xl md:text-6xl font-bold leading-[1.08] tracking-tight">
+        잘라 쓰고 남는 철을 줄이면,<br/>
+        <span class="bg-gradient-to-r from-indigo-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">그만큼이 그대로 이익입니다</span>
+      </h1>
+      <p class="mt-6 text-lg md:text-xl text-slate-300 max-w-2xl leading-relaxed">
+        H형강 <span class="text-indigo-300 font-semibold">절단 계획을 자동으로</span> 계산해 버리는 철(스크랩)을 최소화하고,
+        수주부터 발주·생산·품질·출하·수금·<span class="text-teal-300 font-semibold">최종 손익까지 한 화면</span>에서 봅니다.
+        쓰시던 <span class="text-teal-300 font-semibold">엑셀 그대로 올리시면</span> 됩니다.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#core" class="rounded-xl px-5 py-3 font-semibold bg-gradient-to-r from-indigo-500 to-teal-500 hover:from-indigo-600 hover:to-teal-600 shadow-lg shadow-indigo-500/30 transition">어떻게 동작하는지 보기</a>
+        <a href="proto/index.html" class="group inline-flex items-center gap-2 rounded-xl px-5 py-3 font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/25 transition">
+          <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+          라이브 데모<span class="text-xs opacity-60 group-hover:opacity-100 transition">직접 클릭해보기 →</span>
+        </a>
+        <a href="demo/자동시연.html" class="group inline-flex items-center gap-2 rounded-xl px-5 py-3 font-semibold bg-violet-500/15 border border-violet-500/30 text-violet-200 hover:bg-violet-500/25 transition">
+          <i data-lucide="video" class="w-4 h-4"></i>1분 30초 자동 시연<span class="text-xs opacity-60 group-hover:opacity-100 transition">가만히 보시면 됩니다 →</span>
+        </a>
+      </div>
+
+      <!-- 안심 뱃지 -->
+      <div class="mt-8 flex flex-wrap gap-3 text-sm">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-400"></i>설치 없이 웹에서 바로</span>
+        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-400"></i>쓰던 엑셀 그대로</span>
+        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-400"></i>단계로 나눠 안전하게</span>
+      </div>
+
+      <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl">
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10"><div class="text-xs text-slate-400">예산</div><div class="font-bold text-lg">6,000<span class="text-sm text-slate-400">만원</span></div></div>
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10"><div class="text-xs text-slate-400">기간</div><div class="font-bold text-lg">약 5<span class="text-sm text-slate-400">개월</span></div></div>
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10"><div class="text-xs text-slate-400">대상</div><div class="font-bold text-lg">이든철강<span class="text-sm text-slate-400"> · 대구</span></div></div>
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10"><div class="text-xs text-slate-400">방식</div><div class="font-bold text-lg">PC 웹</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== HERO INSIGHTS =========== -->
+  <section id="hero-insights" class="max-w-7xl mx-auto px-6 py-10 md:py-16 scroll-reveal">
+    <div class="mb-8">
+      <h2 class="text-2xl md:text-3xl font-bold">이 프로젝트를 이렇게 이해했습니다</h2>
+      <p class="mt-2 text-slate-400">먼저 짚어야 할, 비용과 기간을 가르는 3가지</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:-translate-y-1">
+        <div class="text-xs text-indigo-400 font-mono mb-2">1 · 절단 계획</div>
+        <h3 class="text-xl font-semibold mb-3">'막대 자르기'인가 '철판 오려내기'인가</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">긴 막대를 길이로 잘라 쓰는 방식인지, 넓은 철판에서 여러 조각을 배치해 오려내는 방식까지인지에 따라 <span class="text-indigo-300">계산이 훨씬 복잡</span>해집니다. 여기서 개발비·기간이 크게 갈립니다.</p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:-translate-y-1">
+        <div class="text-xs text-teal-400 font-mono mb-2">2 · 범위</div>
+        <h3 class="text-xl font-semibold mb-3">한 번에 다 vs 단계로 나눠서</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">할 일이 상당히 많아, <span class="text-teal-300">단계로 나눠</span> 진행하면 품질과 비용이 훨씬 안정적입니다. 어려운 절단 계획(CP)부터 먼저 확인하고 나머지를 이어가길 권합니다.</p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:-translate-y-1">
+        <div class="text-xs text-cyan-400 font-mono mb-2">3 · 운영 조건</div>
+        <h3 class="text-xl font-semibold mb-3">서버·자료 옮기기·근무 방식</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">시스템을 <span class="text-cyan-300">어느 서버</span>에 둘지, 과거 엑셀 자료를 얼마나 옮길지, 대구 상주가 필요한지 — 이 조건들이 비용과 기간에 영향을 줍니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== CORE — 절단 계획 =========== -->
+  <section id="core" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+      <div>
+        <div class="text-xs font-mono text-indigo-400 mb-3">01 · 핵심 기능</div>
+        <h2 class="text-4xl md:text-5xl font-bold leading-tight mb-6">철을 가장 알뜰하게<br/>자르는 계획, 자동으로</h2>
+        <p class="text-lg text-slate-300 mb-6 leading-relaxed">
+          긴 철 막대에서 필요한 길이를 <span class="text-indigo-300 font-semibold">가장 알뜰하게 잘라내는 계획</span>을 자동으로 세웁니다.
+          마치 <span class="text-teal-300">종이를 최대한 안 버리게 재단하듯</span>, 버리는 철(스크랩)을 최소화해 수율을 끌어올립니다.
+        </p>
+        <ul class="space-y-3 text-slate-300">
+          <li class="flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><span>쓰시던 <span class="text-teal-300">엑셀 파일 그대로 올리면</span> 자동으로 계산합니다</span></li>
+          <li class="flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><span>몇 초 안에 <span class="text-teal-300">버리는 철을 최소화</span>한 배치를 제안합니다</span></li>
+          <li class="flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><span>계산이 맞는지 <span class="text-teal-300">"길이가 딱 맞는지"</span> 자동으로 검증합니다</span></li>
+          <li class="flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><span>이 결과가 발주·생산·손익까지 <span class="text-teal-300">그대로 이어집니다</span></span></li>
+        </ul>
+        <div class="mt-8 flex flex-wrap items-center gap-2 text-xs">
+          <span class="rounded-lg px-3 py-2 bg-indigo-500/15 border border-indigo-500/25 text-indigo-200">① 엑셀 올리기</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span class="rounded-lg px-3 py-2 bg-indigo-500/15 border border-indigo-500/25 text-indigo-200">② 필요한 길이 정리</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span class="rounded-lg px-3 py-2 bg-teal-500/15 border border-teal-500/25 text-teal-200">③ 알뜰하게 배치</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span class="rounded-lg px-3 py-2 bg-cyan-500/15 border border-cyan-500/25 text-cyan-200">④ 확정</span>
+        </div>
+      </div>
+
+      <div class="rounded-3xl backdrop-blur-3xl bg-slate-900/80 border border-white/10 shadow-2xl shadow-indigo-500/20 overflow-hidden">
+        <div class="flex items-center justify-between gap-3 p-4 border-b border-white/10 bg-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center"><i data-lucide="scissors" class="w-4 h-4 text-white"></i></div>
+            <div><div class="font-semibold text-sm">절단 계획 미리보기</div><div class="text-xs text-slate-400">막대 하나 = 12m</div></div>
+          </div>
+          <span class="rounded-full px-2.5 py-1 text-[11px] bg-teal-500/20 text-teal-300 border border-white/10">버리는 철 최소</span>
+        </div>
+        <div class="p-6 space-y-3">
+          <div><div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span>막대 1</span><span>버림 0 · 100% 사용</span></div><div class="nest-bar"><div class="nest-seg nest-flange" style="width:50%">6.0m</div><div class="nest-seg nest-flange" style="width:50%">6.0m</div></div></div>
+          <div><div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span>막대 2</span><span>버림 0.5m · 96% 사용</span></div><div class="nest-bar"><div class="nest-seg nest-web" style="width:45.8%">5.5m</div><div class="nest-seg nest-flange" style="width:50%">6.0m</div><div class="nest-seg nest-scrap" style="width:4.2%"></div></div></div>
+          <div><div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span>막대 3</span><span>버림 0.9m · 92% 사용</span></div><div class="nest-bar"><div class="nest-seg nest-web" style="width:45.8%">5.5m</div><div class="nest-seg nest-flange" style="width:37.5%">4.5m</div><div class="nest-seg nest-scrap" style="width:16.7%">버림</div></div></div>
+          <div><div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span>막대 4</span><span>버림 1.0m · 92% 사용</span></div><div class="nest-bar"><div class="nest-seg nest-web" style="width:25%">3.0m</div><div class="nest-seg nest-web" style="width:25%">3.0m</div><div class="nest-seg nest-flange" style="width:41.7%">5.0m</div><div class="nest-seg nest-scrap" style="width:8.3%"></div></div></div>
+          <div class="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded nest-flange inline-block"></span>넓은 부재</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded nest-web inline-block"></span>가운데 부재</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded nest-scrap inline-block"></span>버리는 철</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 bg-white/5">
+          <div class="p-4 text-center"><div class="text-xs text-slate-400 mb-1">평균 사용률</div><div class="text-2xl font-bold text-teal-300"><span data-countup-decimal="96.2">0</span><span class="text-base">%</span></div></div>
+          <div class="p-4 text-center"><div class="text-xs text-slate-400 mb-1">버리는 철</div><div class="text-2xl font-bold"><span data-countup-decimal="8.4">0</span><span class="text-base text-slate-400">m</span></div></div>
+          <div class="p-4 text-center"><div class="text-xs text-slate-400 mb-1">필요 막대</div><div class="text-2xl font-bold"><span data-countup="34">0</span><span class="text-base text-slate-400">개</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== DASHBOARD =========== -->
+  <section id="portfolio" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="text-xs font-mono text-teal-400 mb-3">02 · 한눈에 보기</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">회사 전체를 한 화면에</h2>
+      <p class="mt-3 text-lg text-slate-300">수주·수율·미수금·손익을 <span class="text-teal-300">원화 기준</span>으로 · 환율은 자동으로 반영됩니다</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+      <div class="col-span-2 md:col-span-2 md:row-span-2 rounded-3xl p-8 backdrop-blur-3xl bg-gradient-to-br from-indigo-500/20 to-teal-500/10 border border-indigo-500/20 relative overflow-hidden">
+        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-indigo-500/10 blur-3xl"></div>
+        <div class="relative">
+          <div class="text-sm text-slate-400 mb-2">진행 중인 수주 금액</div>
+          <div class="text-5xl md:text-6xl font-bold leading-none">₩<span data-countup="1284500000">0</span></div>
+          <div class="mt-4 flex items-center gap-2 text-teal-300"><i data-lucide="trending-up" class="w-4 h-4"></i><span class="font-semibold">+8.4%</span><span class="text-slate-400 text-sm">지난달보다</span></div>
+          <div class="mt-6 flex items-center gap-3 text-xs text-slate-400">
+            <span class="rounded-full px-2 py-0.5 bg-white/5 border border-white/10">국내 14건</span>
+            <span class="rounded-full px-2 py-0.5 bg-white/5 border border-white/10">일본 4건</span>
+            <span class="rounded-full px-2 py-0.5 bg-white/5 border border-white/10">호주 2건</span>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">이번 달 아낀 철 값</div>
+        <div class="text-2xl font-bold text-teal-400">+₩<span data-countup="12480000">0</span></div>
+        <div class="mt-3 h-8"><canvas id="eden-spark" class="w-full h-full"></canvas></div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">평균 철 사용률</div>
+        <div class="text-2xl font-bold text-teal-400">+<span data-countup-decimal="96.2">0</span>%</div>
+        <div class="mt-1 text-xs text-slate-500">목표 95% 넘김</div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">손익 건강 점수</div>
+        <div class="flex items-baseline gap-2"><div class="text-2xl font-bold"><span data-countup="84">0</span></div><div class="text-sm text-slate-500">/ 100</div></div>
+        <div class="mt-2 inline-flex items-center gap-1.5 text-xs rounded-full px-2 py-0.5 bg-teal-500/20 text-teal-400"><span>양호</span></div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">엑셀 자동 인식률</div>
+        <div class="text-2xl font-bold text-cyan-400">94<span class="text-base">%</span></div>
+        <div class="mt-1 text-xs text-slate-500">올린 파일 100건 기준</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div class="lg:col-span-2 rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <h3 class="font-semibold mb-4">달마다 수주 흐름</h3>
+        <div class="h-64"><canvas id="eden-trend"></canvas></div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <h3 class="font-semibold mb-4">나라별 수주 비중</h3>
+        <div class="h-64 flex items-center justify-center"><canvas id="eden-currency"></canvas></div>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <div class="flex items-center justify-between p-6 border-b border-white/10">
+        <h3 class="font-semibold">진행 중인 프로젝트</h3>
+        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>예시 데이터</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-xs text-slate-400 border-b border-white/5"><th class="px-6 py-3">프로젝트</th><th class="px-4 py-3">고객사</th><th class="px-4 py-3">나라</th><th class="px-4 py-3 text-right">철 사용률</th><th class="px-4 py-3 text-right">예상 이익률</th><th class="px-4 py-3 text-right">진행 상태</th></tr></thead>
+          <tbody class="divide-y divide-white/5">
+            <tr class="hover:bg-white/5"><td class="px-6 py-3">2026-0031</td><td class="px-4 py-3">大阪스틸</td><td class="px-4 py-3">일본</td><td class="px-4 py-3 text-right text-teal-300">96.2%</td><td class="px-4 py-3 text-right text-teal-300">+14.2%</td><td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-orange-500/20 text-orange-300">생산 중</span></td></tr>
+            <tr class="hover:bg-white/5"><td class="px-6 py-3">2026-0029</td><td class="px-4 py-3">대성건설</td><td class="px-4 py-3">국내</td><td class="px-4 py-3 text-right text-teal-300">97.4%</td><td class="px-4 py-3 text-right text-teal-300">+11.8%</td><td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-blue-500/20 text-blue-300">수주 확정</span></td></tr>
+            <tr class="hover:bg-white/5"><td class="px-6 py-3">2026-0027</td><td class="px-4 py-3">Perth Steel</td><td class="px-4 py-3">호주</td><td class="px-4 py-3 text-right text-amber-300">93.1%</td><td class="px-4 py-3 text-right text-teal-300">+9.6%</td><td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-teal-500/20 text-teal-300">절단 계획</span></td></tr>
+            <tr class="hover:bg-white/5"><td class="px-6 py-3">2026-0024</td><td class="px-4 py-3">한빛중공업</td><td class="px-4 py-3">국내</td><td class="px-4 py-3 text-right text-teal-300">95.8%</td><td class="px-4 py-3 text-right text-slate-300">+7.2%</td><td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300">정산 완료</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== ENGINE — 손익 건강검진 =========== -->
+  <section id="engine" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="text-xs font-mono text-cyan-400 mb-3">03 · 손익 건강검진</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">이 프로젝트, 얼마 남을까?</h2>
+      <p class="mt-3 text-lg text-slate-300">견적 단계의 <span class="text-teal-300">예상 이익</span>부터 끝난 뒤 <span class="text-teal-300">실제 손익</span>까지 자동으로 계산하고, 왜 그런지 이유까지 보여드립니다</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="rounded-2xl p-8 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <div class="text-xs text-slate-400">일본 수출 프로젝트 · 손익 건강 점수</div>
+            <div class="flex items-baseline gap-3 mt-1"><div class="text-5xl font-bold">84</div><div class="text-sm text-slate-500">/ 100</div><div class="rounded-full px-3 py-1 bg-teal-500/20 text-teal-400 text-sm font-semibold">양호</div></div>
+          </div>
+        </div>
+        <div class="h-80"><canvas id="eden-radar"></canvas></div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="rounded-2xl p-5 bg-white/5 border border-white/10"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm">철 사용률</span><span class="font-mono text-teal-300 font-bold">96</span></div><div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-teal-400" style="width:96%"></div></div><p class="text-xs text-slate-400">버리는 철이 3.8%뿐, 목표보다 좋습니다 · 사용률 1%p ≈ 약 124만원 절감</p></div>
+        <div class="rounded-2xl p-5 bg-white/5 border border-white/10"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm">원가 정확도</span><span class="font-mono text-teal-300 font-bold">88</span></div><div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-teal-400" style="width:88%"></div></div><p class="text-xs text-slate-400">처음 예상한 원가와 실제 차이가 4.1%로 정확한 편</p></div>
+        <div class="rounded-2xl p-5 bg-white/5 border border-white/10"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm">남는 이익</span><span class="font-mono text-amber-300 font-bold">72</span></div><div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-amber-400" style="width:72%"></div></div><p class="text-xs text-slate-400">예상 이익률 14.2% · 원자재비가 62%라 철 값에 민감</p></div>
+        <div class="rounded-2xl p-5 bg-white/5 border border-white/10"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm">환율 안전</span><span class="font-mono text-teal-300 font-bold">79</span></div><div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-cyan-400" style="width:79%"></div></div><p class="text-xs text-slate-400">일본 미수금 있는데 엔화 2% 떨어지면 약 150만원 손실 위험 · 자동 감시</p></div>
+        <div class="rounded-2xl p-5 bg-white/5 border border-white/10"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm">납기 지킴</span><span class="font-mono text-teal-300 font-bold">91</span></div><div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-teal-400" style="width:91%"></div></div><p class="text-xs text-slate-400">계획보다 2일 이내로 잘 맞추는 중</p></div>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl p-6 backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20">
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-xl bg-indigo-500/20"><i data-lucide="lightbulb" class="w-5 h-5 text-indigo-300"></i></div>
+        <div class="flex-1">
+          <div class="font-semibold mb-1">한 줄 해설</div>
+          <p class="text-slate-300 text-sm leading-relaxed">철 값이 원가의 62%를 차지해서, <span class="text-teal-300">철을 조금만 더 알뜰하게 써도(사용률 1%p) 이익이 눈에 띄게 늘어납니다.</span> 일본 미수금은 받는 날 환율로 계산해 손해를 줄이도록 설계했습니다.</p>
+          <p class="mt-3 text-xs text-amber-400 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>위 숫자는 예시이며 실제 회계 판단의 유일한 근거가 될 수 없습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== OPERATOR — 운영 + 시뮬레이터 =========== -->
+  <section id="operator" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="text-xs font-mono text-indigo-400 mb-3">04 · 운영</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">누가 무엇을 볼지, 얼마가 절감될지</h2>
+      <p class="mt-3 text-lg text-slate-300">부서별로 볼 수 있는 화면을 나누고 · 철을 더 알뜰하게 쓰면 얼마 아끼는지 직접 계산해 보세요</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="users" class="w-3.5 h-3.5"></i>사용 인원</div><div class="text-3xl font-bold"><span data-countup="24">0</span>명</div><div class="text-xs text-teal-400 mt-1">9개 부서</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="folder" class="w-3.5 h-3.5"></i>등록 프로젝트</div><div class="text-3xl font-bold"><span data-countup="186">0</span>건</div><div class="text-xs text-slate-500 mt-1">누적</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="scissors" class="w-3.5 h-3.5"></i>처리한 절단 계획</div><div class="text-3xl font-bold"><span data-countup="342">0</span>건</div><div class="text-xs text-slate-500 mt-1">자동 계산</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i>오류율</div><div class="text-3xl font-bold text-teal-400"><span data-countup-decimal="0.1">0</span>%</div><div class="text-xs text-slate-500 mt-1">지난 24시간</div></div>
+    </div>
+
+    <div class="rounded-2xl p-8 backdrop-blur-3xl bg-gradient-to-br from-teal-500/10 to-transparent border border-teal-500/20">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="p-2.5 rounded-xl bg-teal-500/20"><i data-lucide="calculator" class="w-5 h-5 text-teal-300"></i></div>
+        <div><h3 class="font-semibold text-lg">절감 계산기</h3><p class="text-sm text-slate-400">1년에 쓰는 철 값과 사용률 개선폭을 조정해 보세요</p></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="text-sm text-slate-400 mb-2 block">1년에 쓰는 철 값 (억원)</label>
+          <div class="flex items-center gap-3"><input type="range" id="eden-mat" min="10" max="200" value="80" class="flex-1" /><span id="eden-mat-display" class="font-mono text-sm w-16 text-right">80억</span></div>
+          <label class="text-sm text-slate-400 mb-2 mt-4 block">철 사용률 개선폭 (%p)</label>
+          <div class="flex items-center gap-3"><input type="range" id="eden-yield" min="0.5" max="5" step="0.1" value="1.5" class="flex-1" /><span id="eden-yield-display" class="font-mono text-sm w-16 text-right">1.5%p</span></div>
+        </div>
+        <div class="flex flex-col justify-center text-right">
+          <div class="text-sm text-slate-400">1년에 아끼는 철 값 (예상)</div>
+          <div class="text-5xl font-bold text-teal-300 my-2">₩<span id="eden-save">120,000,000</span></div>
+          <div class="text-sm text-slate-500">버리던 철이 줄어든 만큼</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== INSIGHTS — 아직 정하지 않은 것들 =========== -->
+  <section id="insights" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-amber-400 mb-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>05 · 먼저 짚었습니다<span class="rounded-full px-2 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-semibold">보너스</span></div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">아직 정하지 않은 것들, 먼저 공유드립니다</h2>
+      <p class="mt-3 text-lg text-slate-300">공고만 보고도 짚어낸, 미리 정해두면 비용·기간이 안전해지는 항목들</p>
+    </div>
+
+    <div class="mb-10">
+      <h3 class="font-semibold mb-4 flex items-center gap-2"><i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>가장 크게 갈리는 3가지</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-3"><span class="font-mono text-xs text-amber-400">1 · 절단 방식</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-red-500/20 text-red-300">영향 가장 큼</span></div>
+          <h4 class="font-semibold mb-3">막대 자르기 vs 철판 오려내기</h4>
+          <p class="text-sm text-slate-300 leading-relaxed">긴 막대를 길이로 자르는 것만인지, 넓은 철판에서 조각을 배치해 오려내는 것까지인지에 따라 <span class="text-red-300 font-semibold">비용·기간이 크게 달라집니다.</span></p>
+        </div>
+        <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-3"><span class="font-mono text-xs text-amber-400">2 · '최적' 기준</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-amber-500/20 text-amber-300">합격 기준</span></div>
+          <h4 class="font-semibold mb-3">빠르고 충분히 vs 최대한 아끼기</h4>
+          <p class="text-sm text-slate-300 leading-relaxed">몇 초 안에 충분히 좋은 안이면 되는지, 시간이 걸려도 최대한 아낀 안을 원하는지 — <span class="text-amber-300">합격 기준(목표 %)</span>을 함께 정하면 좋습니다.</p>
+        </div>
+        <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-3"><span class="font-mono text-xs text-amber-400">3 · 엑셀 양식</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-amber-500/20 text-amber-300">시작 조건</span></div>
+          <h4 class="font-semibold mb-3">단순한 표 vs 복잡한 수식</h4>
+          <p class="text-sm text-slate-300 leading-relaxed">쓰시는 엑셀이 단순한 표인지, 수식·매크로가 얽혀 있는지에 따라 준비 시간이 다릅니다. <span class="text-amber-300">이 양식이 곧 설계도</span>입니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="font-semibold mb-4 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>공고에 없지만 실제로 필요한 것들</h3>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex flex-wrap gap-3">
+          <span class="rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200">과거 엑셀 자료 옮기기</span>
+          <span class="rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200">누가 언제 바꿨는지 기록</span>
+          <span class="rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200">수금·클레임 자동 알림</span>
+          <span class="rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200">사진·스캔·도면 보관</span>
+          <span class="rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200">검색·정렬 기본 기능</span>
+          <span class="rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200">엑셀로 내려받기</span>
+        </div>
+        <p class="mt-4 text-xs text-slate-500">ℹ 이 항목들은 공고에 적혀 있지 않지만, 실제로 쓰다 보면 필요해집니다. 미리 정해두면 나중에 추가 비용을 줄일 수 있습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== QUESTIONS =========== -->
+  <section id="questions" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-indigo-400 mb-3"><span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>06 · 여쭤보고 싶은 것<span class="rounded-full px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold">보너스</span></div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">담당자분께 꼭 여쭙고 싶은 10가지</h2>
+      <p class="mt-3 text-lg text-slate-300">이 답이 비용·기간을 결정합니다 · 어렵지 않게 예/아니오, A/B로 답하실 수 있게 정리했어요</p>
+    </div>
+
+    <div class="rounded-2xl backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">1</span><span class="flex-1">절단이 '긴 막대 자르기' 위주인가요, '철판에서 조각 오려내기'까지 포함하나요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 막대 자르기 위주 · (B) 철판에서 조각 배치까지 · (C) 둘 다</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 후자는 계산이 훨씬 복잡해 <span class="text-red-300">개발 기간·비용이 수천만원 추가</span>될 수 있어요. (권장: 우선 A로 시작)</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">2</span><span class="flex-1">"최적"을 어느 수준으로 보시나요? 빠르고 충분히 vs 느려도 최대한 절감?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 빠르고 실무상 충분 · (B) 느려도 최대한 절감</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 'B'는 기간이 늘 수 있어요. 합격 기준(목표 사용률 %, 허용 시간)도 함께 정해 주세요.</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">3</span><span class="flex-1">지금 쓰시는 절단 계획 엑셀을 착수 즉시 주실 수 있나요? 단순한 표인가요, 복잡한가요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 단순 표 · (B) 수식·매크로 복잡 · 제공 시점: 착수 즉시 가능?</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 이 양식이 곧 <span class="text-teal-300">설계도</span>예요. 늦어지면 전체 일정이 그만큼 밀립니다.</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">4</span><span class="flex-1">시험성적서 양식이 국내·일본·호주 합쳐 총 몇 종인가요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> 국내 O종 / 일본 O종 / 호주 O종 (+샘플)</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 양식 1종마다 별도 작업이라 <span class="text-amber-300">종류가 많을수록 비용·기간이 늘어요.</span></p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">5</span><span class="flex-1">'MCS'가 정확히 무엇을 뜻하나요? (예: 제조 성적서/밀 시트 등)</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> 자유 답변 또는 예시 파일</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 뜻이 확정돼야 생산·품질 화면을 설계할 수 있어요.</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">6</span><span class="flex-1">더존 ERP를 이번에 실제로 '연결'까지 하나요, '나중에 연결할 수 있게 준비만' 하나요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 준비만(이번 제외) · (B) 실제 연동까지</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 'B'면 별도 연동 비용·기간이 추가돼요. (권장: A)</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">7</span><span class="flex-1">기존 엑셀의 과거 데이터를 새 시스템으로 옮겨야 하나요? 몇 년치인가요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 신규만 · (B) 최근 O년 · (C) 전체 이관</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 옮길 데이터가 많을수록 정리·확인에 별도 비용·시간이 들어요.</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">8</span><span class="flex-1">시스템을 '개발사가 관리하는 서버'에 둘까요, '우리 회사 안 서버'에 둘까요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 개발사 클라우드 · (B) 자사 서버</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 'B'는 서버 준비·설치가 추가돼 비용·기간이 늘 수 있어요.</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">9</span><span class="flex-1">부서·직급별로 '누가 어느 화면을 볼 수 있는지' 권한표를 주실 수 있나요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> 제공 가능? 예 / 아니오</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 권한 설계는 시스템 뼈대라 초반에 정해져야 해요.</p></div></details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">10</span><span class="flex-1">예산 6,000만원·5개월 안에 1·2·3차 전부를 한 번에 하실까요, 단계로 나눠서 하실까요?</span></summary><div class="accordion-body"><p><span class="text-slate-400">고르기:</span> (A) 일괄 · (B) 단계 분리</p><p class="mt-2"><span class="text-amber-300">왜 중요:</span> 범위가 커서 단계로 나누면 품질·비용이 안정적이에요. (권장: B · 어려운 절단 계획부터 먼저)</p></div></details>
+    </div>
+
+    <div class="mt-6 text-center">
+      <a href="#cta" class="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition border border-indigo-500/30">이 질문들을 함께 답해봐요<i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+    </div>
+  </section>
+
+  <!-- =========== RISKS =========== -->
+  <section id="risks" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-red-400 mb-3"><span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>07 · 미리 대비<span class="rounded-full px-2 py-0.5 bg-red-500/20 text-red-300 text-[10px] font-semibold">보너스</span></div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">생길 수 있는 문제, 미리 준비했습니다</h2>
+      <p class="mt-3 text-lg text-slate-300">미리 알아야 미리 막을 수 있습니다 · 각 항목마다 대응 방법을 준비해 두었어요</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3 rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">얼마나 자주 × 얼마나 크게</h3>
+          <div class="flex items-center gap-3 text-xs text-slate-400"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span>큼</span><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>중간</span><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-500"></span>작음</span></div>
+        </div>
+        <div class="relative h-80"><canvas id="eden-risks"></canvas></div>
+        <p class="mt-2 text-xs text-slate-500 text-center">각 점을 클릭하면 대응 방법이 표시됩니다</p>
+      </div>
+
+      <div class="lg:col-span-2 space-y-3">
+        <h3 class="font-semibold mb-3">특히 신경 쓰는 5가지</h3>
+        <div class="rounded-xl p-4 bg-red-500/10 border border-red-500/20"><div class="font-semibold text-sm mb-1">절단 계산이 복잡할 수 있음</div><p class="text-xs text-slate-400">가장 어려운 절단 계산을 계약 초기 1주에 먼저 맞춰봅니다(선검증). 복잡한 방식은 별도 협의로 분리.</p></div>
+        <div class="rounded-xl p-4 bg-red-500/10 border border-red-500/20"><div class="font-semibold text-sm mb-1">할 일이 많아 벅찰 수 있음</div><p class="text-xs text-slate-400">한 번에 다 하기보다 단계로 나눠(1→2→3차) 품질·비용을 안정시킵니다.</p></div>
+        <div class="rounded-xl p-4 bg-red-500/10 border border-red-500/20"><div class="font-semibold text-sm mb-1">엑셀 양식 확보가 늦어질 수 있음</div><p class="text-xs text-slate-400">착수 직후 반나절 '엑셀 양식 워크숍'으로 필요한 양식을 먼저 확보합니다.</p></div>
+        <div class="rounded-xl p-4 bg-amber-500/10 border border-amber-500/20"><div class="font-semibold text-sm mb-1">혼자 개발이라 부담</div><p class="text-xs text-slate-400">단계로 나눠 일을 고르게 배분하고, 문서·기록을 계속 남겨 안전망을 만듭니다.</p></div>
+        <div class="rounded-xl p-4 bg-amber-500/10 border border-amber-500/20"><div class="font-semibold text-sm mb-1">'합격 기준'이 모호할 수 있음</div><p class="text-xs text-slate-400">합격 기준(목표 사용률·계산 시간)을 계약서에 숫자로 미리 적어 분쟁을 막습니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== HOW IT WORKS (간소화 아키텍처) =========== -->
+  <section id="architecture" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-cyan-400 mb-3"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>08 · 이렇게 동작합니다</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">복잡한 건 안에 숨기고, 버튼만 누르시면 됩니다</h2>
+      <p class="mt-3 text-lg text-slate-300">담당자분은 화면에서 클릭만 하시면, 나머지는 시스템이 알아서 처리합니다</p>
+    </div>
+
+    <div class="rounded-2xl p-8 md:p-10 backdrop-blur-3xl bg-white/5 border border-white/10">
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-2 items-start">
+        <div class="flow-step"><div class="w-16 h-16 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center"><i data-lucide="upload" class="w-7 h-7 text-indigo-300"></i></div><div class="text-sm font-semibold">엑셀 올리기</div><div class="text-xs text-slate-400">쓰던 파일 그대로</div></div>
+        <div class="hidden md:flex items-center justify-center h-16"><i data-lucide="arrow-right" class="w-5 h-5 text-slate-600"></i></div>
+        <div class="flow-step"><div class="w-16 h-16 rounded-2xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center"><i data-lucide="scissors" class="w-7 h-7 text-teal-300"></i></div><div class="text-sm font-semibold">절단 계획 자동 계산</div><div class="text-xs text-slate-400">버리는 철 최소</div></div>
+        <div class="hidden md:flex items-center justify-center h-16"><i data-lucide="arrow-right" class="w-5 h-5 text-slate-600"></i></div>
+        <div class="flow-step"><div class="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center"><i data-lucide="file-check" class="w-7 h-7 text-cyan-300"></i></div><div class="text-sm font-semibold">수주·발주 서류</div><div class="text-xs text-slate-400">자동 생성·PDF</div></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-2 items-start mt-6 md:mt-4">
+        <div class="flow-step md:col-start-2"><div class="w-16 h-16 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center"><i data-lucide="factory" class="w-7 h-7 text-indigo-300"></i></div><div class="text-sm font-semibold">생산·품질 관리</div><div class="text-xs text-slate-400">성적서·검수</div></div>
+        <div class="hidden md:flex items-center justify-center h-16"><i data-lucide="arrow-right" class="w-5 h-5 text-slate-600"></i></div>
+        <div class="flow-step"><div class="w-16 h-16 rounded-2xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center"><i data-lucide="trending-up" class="w-7 h-7 text-teal-300"></i></div><div class="text-sm font-semibold">최종 손익·대시보드</div><div class="text-xs text-slate-400">환율까지 자동 반영</div></div>
+      </div>
+
+      <div class="mt-8 pt-6 border-t border-white/10 flex flex-wrap gap-3 text-sm">
+        <span class="inline-flex items-center gap-1.5 text-slate-300"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-400"></i>설치 없이 웹에서 바로 사용</span>
+        <span class="inline-flex items-center gap-1.5 text-slate-300"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-400"></i>쓰던 엑셀과 그대로 연결</span>
+        <span class="inline-flex items-center gap-1.5 text-slate-300"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-400"></i>부서별로 볼 화면 구분</span>
+      </div>
+      <div class="mt-4">
+        <a href="../it.html#architecture" class="text-sm text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1">기술 상세(아키텍처·설계 근거·코드)가 궁금하시면 IT 담당자용 버전 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== TIMELINE =========== -->
+  <section id="timeline" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-teal-400 mb-3"><span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>09 · 일정<span class="rounded-full px-2 py-0.5 bg-teal-500/20 text-teal-300 text-[10px] font-semibold">보너스</span></div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">약 5개월, 단계로 나눠 진행합니다</h2>
+      <p class="mt-3 text-lg text-slate-300">가장 어려운 절단 계획부터 먼저 확인하고, 단계마다 함께 검토합니다</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-purple-500/20">
+        <div class="text-xs font-mono text-purple-300 mb-2">1단계 · 약 1.5개월</div>
+        <div class="font-semibold mb-2">기획·설계 + 절단 계획 확인</div>
+        <p class="text-sm text-slate-400">양식 워크숍, 기본 기능 준비, <span class="text-purple-300">대표 프로젝트로 절단 결과 먼저 맞춰보기</span></p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-pink-500/20">
+        <div class="text-xs font-mono text-pink-300 mb-2">2단계</div>
+        <div class="font-semibold mb-2">견적·절단·발주</div>
+        <p class="text-sm text-slate-400">예상 원가 계산, 절단 계획, 제강사 비교, 수주 확정 시 발주서 자동 생성</p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-emerald-500/20">
+        <div class="text-xs font-mono text-emerald-300 mb-2">3단계 · 약 3.5개월</div>
+        <div class="font-semibold mb-2">생산·품질·유통</div>
+        <p class="text-sm text-slate-400">작업지시, 시험성적서·불량·클레임, 출하, 유통 매입/매출 이익률</p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-cyan-500/20">
+        <div class="text-xs font-mono text-cyan-300 mb-2">4단계 · 약 4.5개월</div>
+        <div class="font-semibold mb-2">자금·손익 + 마무리</div>
+        <p class="text-sm text-slate-400">기성·수금·미수금(환율), 최종 손익, 대표이사 대시보드, 통합 테스트·오픈</p>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl p-6 backdrop-blur-3xl bg-gradient-to-br from-teal-500/10 to-transparent border border-teal-500/20 flex items-start gap-4">
+      <div class="p-2.5 rounded-xl bg-teal-500/20 flex-shrink-0"><i data-lucide="shield-check" class="w-5 h-5 text-teal-300"></i></div>
+      <div>
+        <div class="font-semibold mb-1">어려운 것부터 먼저 확인합니다</div>
+        <p class="text-slate-300 text-sm leading-relaxed">가장 어려운 <span class="text-teal-300 font-semibold">절단 계획을 계약 초기에 먼저 맞춰보고</span>, 단계마다 함께 검토하며 진행합니다. 이렇게 하면 예산과 일정의 위험을 함께 관리할 수 있어 안전합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== WHY-US =========== -->
+  <section id="why-us" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10 text-center">
+      <div class="text-xs font-mono text-indigo-400 mb-3">10 · 왜 저희와</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">왜 저희와 함께해야 할까요</h2>
+      <p class="mt-3 text-lg text-slate-300 max-w-2xl mx-auto">말이 아니라, 미리 준비한 것으로 보여드립니다</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-indigo-400">22<span class="text-lg">년</span></div><div class="text-xs text-slate-400 mt-1">개발 경력</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-teal-400">32<span class="text-lg">+</span></div><div class="text-xs text-slate-400 mt-1">수행 프로젝트</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-cyan-400">1<span class="text-lg">주</span></div><div class="text-xs text-slate-400 mt-1">동작 화면 제작</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-indigo-300">즉시</div><div class="text-xs text-slate-400 mt-1">체험 가능</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><div><div class="font-semibold mb-1">공고를 아주 깊이 읽었습니다</div><p class="text-sm text-slate-400">먼저 정해야 할 것들과 빠진 것들을 미리 짚어 공유드립니다.</p></div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><div><div class="font-semibold mb-1">가장 어려운 기능부터 먼저 증명</div><p class="text-sm text-slate-400">절단 계획을 계약 초기 1주 안에 실제로 맞춰 보여드립니다.</p></div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><div><div class="font-semibold mb-1">단계로 나눠 안전하게</div><p class="text-sm text-slate-400">한 번에 몰지 않고 단계마다 검토해 비용·일정 위험을 함께 관리합니다.</p></div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 flex items-start gap-3"><i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i><div><div class="font-semibold mb-1">1주 안에 눌러볼 수 있는 화면</div><p class="text-sm text-slate-400">문서만이 아니라 실제로 클릭 가능한 화면으로 오해를 줄입니다.</p></div></div>
+    </div>
+  </section>
+
+  <!-- =========== MINI FAQ (불안 해소) =========== -->
+  <section id="faq" class="max-w-5xl mx-auto px-6 py-16">
+    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center">자주 걱정하시는 점</h2>
+    <div class="space-y-3">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="font-semibold mb-2 flex items-center gap-2"><i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>비용이 예상보다 커지면 어쩌죠?</div><p class="text-sm text-slate-400 leading-relaxed">단계로 나눠 진행하고, 어려운 기능(절단 계획)을 먼저 확인합니다. 범위가 늘면 비용·일정 영향을 <span class="text-teal-300">먼저 알려드린 뒤</span> 결정하시게 합니다.</p></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="font-semibold mb-2 flex items-center gap-2"><i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>완성 후 버그가 나면요?</div><p class="text-sm text-slate-400 leading-relaxed">오픈 후 무상 하자보수 기간을 계약에 명시합니다. 진행 중에도 <span class="text-teal-300">매주 보고</span>드려 문제를 조기에 잡습니다.</p></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="font-semibold mb-2 flex items-center gap-2"><i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>나중에 우리 직원이 관리할 수 있나요?</div><p class="text-sm text-slate-400 leading-relaxed">소스와 운영 문서를 모두 드리고, 인수인계 세션을 진행합니다. 모든 자료의 <span class="text-teal-300">소유권은 이든철강</span>에 있습니다.</p></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10"><div class="font-semibold mb-2 flex items-center gap-2"><i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>지금 쓰는 엑셀을 다 버려야 하나요?</div><p class="text-sm text-slate-400 leading-relaxed">아니요. <span class="text-teal-300">쓰던 엑셀 그대로 올리면</span> 시스템이 읽어들이고, 필요하면 다시 엑셀로 내려받을 수도 있게 만듭니다.</p></div>
+    </div>
+  </section>
+
+  <!-- =========== CTA =========== -->
+  <section id="cta" class="max-w-5xl mx-auto px-6 py-16 md:py-24">
+    <div class="rounded-3xl p-10 md:p-16 backdrop-blur-3xl bg-gradient-to-br from-indigo-500/20 via-teal-500/10 to-cyan-500/10 border border-indigo-500/30 relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl -mr-32 -mt-32"></div>
+      <div class="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl -ml-32 -mb-32"></div>
+      <div class="relative text-center">
+        <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs bg-white/10 border border-white/20 text-slate-200 mb-6"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300"></i>30분이면 충분합니다</div>
+        <h2 class="text-4xl md:text-5xl font-bold leading-tight mb-6">30분 편하게 통화하며<br/><span class="bg-gradient-to-r from-indigo-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">궁금한 점 다 물어보세요</span></h2>
+        <p class="text-lg text-slate-300 mb-10 max-w-2xl mx-auto">어려운 기술 용어 없이, 이 화면을 함께 보면서 설명드립니다.</p>
+
+        <div class="rounded-2xl p-8 bg-slate-950/40 border border-white/10 mb-8 max-w-2xl mx-auto text-left">
+          <div class="flex items-center gap-2 text-sm font-semibold mb-4"><i data-lucide="calculator" class="w-4 h-4 text-teal-400"></i>이 시스템, 얼마나 도움이 될까요?</div>
+          <label class="text-xs text-slate-400 mb-2 block">한 달에 절단 계획을 세우는 횟수</label>
+          <div class="flex items-center gap-4"><input type="range" id="roi-trades" min="1" max="50" value="12" class="flex-1" /><span id="roi-trades-display" class="font-mono text-sm w-12 text-right">12회</span></div>
+          <div class="mt-6 grid grid-cols-2 gap-4">
+            <div class="rounded-xl p-4 bg-teal-500/10 border border-teal-500/20"><div class="text-xs text-slate-400 mb-1">1년에 아끼는 시간</div><div class="text-2xl font-bold text-teal-400"><span id="roi-hours">48</span><span class="text-sm">시간</span></div></div>
+            <div class="rounded-xl p-4 bg-indigo-500/10 border border-indigo-500/20"><div class="text-xs text-slate-400 mb-1">인건비로 환산하면</div><div class="text-2xl font-bold text-indigo-400">₩<span id="roi-cost">2,400,000</span></div></div>
+          </div>
+          <p class="mt-3 text-[11px] text-slate-500">※ 손으로 계획할 때보다 1건당 약 20분 절약 기준. 버리는 철 값 절감은 위 <span class="text-slate-400">절감 계산기</span>를 참고하세요.</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-3 text-sm">
+          <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="shield-check" class="w-4 h-4 text-teal-400"></i>무상 하자보수</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="calendar-check" class="w-4 h-4 text-teal-400"></i>매주 진행 보고</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="map-pin" class="w-4 h-4 text-teal-400"></i>대구 방문 협의 가능</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 bg-white/5 border border-white/10 text-slate-300"><i data-lucide="award" class="w-4 h-4 text-teal-400"></i>22년 경력</span>
+        </div>
+
+        <p class="mt-8 text-sm text-slate-400">궁금하신 점은 위시켓 메시지로 편하게 문의해주세요. 응답 평균 12시간 이내.</p>
+        <p class="mt-4 text-xs text-slate-500">원문 공고: <a href="https://www.wishket.com/project/156936/" target="_blank" rel="noopener" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">위시켓 #156936</a> · <a href="../it.html" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">IT 담당자용 버전 보기</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== CMD+K MODAL =========== -->
+  <div id="cmdk-backdrop" class="fixed inset-0 z-20 bg-slate-950/70 backdrop-blur-sm hidden" aria-hidden="true"></div>
+  <div id="cmdk-modal" class="fixed inset-0 z-20 hidden items-start justify-center pt-24 px-4" role="dialog" aria-modal="true">
+    <div class="w-full max-w-xl rounded-2xl backdrop-blur-3xl bg-slate-900/95 border border-white/20 shadow-2xl shadow-indigo-500/20 overflow-hidden">
+      <div class="flex items-center gap-3 p-4 border-b border-white/10">
+        <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
+        <input type="text" id="cmdk-input" placeholder="메뉴 이동…" class="bg-transparent flex-1 outline-none text-sm" />
+        <kbd class="font-mono text-xs px-2 py-1 rounded bg-white/10 text-slate-400">ESC</kbd>
+      </div>
+      <ul class="max-h-80 overflow-y-auto p-2" id="cmdk-list">
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#core"><i data-lucide="scissors" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">철 자르는 계획</span><span class="text-xs text-slate-500">01</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#portfolio"><i data-lucide="bar-chart-3" class="w-4 h-4 text-teal-400"></i><span class="flex-1 text-sm">한눈에 보기</span><span class="text-xs text-slate-500">02</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#engine"><i data-lucide="target" class="w-4 h-4 text-cyan-400"></i><span class="flex-1 text-sm">손익 건강검진</span><span class="text-xs text-slate-500">03</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#operator"><i data-lucide="users" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">운영·절감 계산기</span><span class="text-xs text-slate-500">04</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#insights"><i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i><span class="flex-1 text-sm">아직 정하지 않은 것들</span><span class="text-xs text-slate-500">05</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#questions"><i data-lucide="message-circle-question" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">여쭤보고 싶은 것</span><span class="text-xs text-slate-500">06</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#risks"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i><span class="flex-1 text-sm">미리 대비</span><span class="text-xs text-slate-500">07</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#architecture"><i data-lucide="workflow" class="w-4 h-4 text-cyan-400"></i><span class="flex-1 text-sm">이렇게 동작합니다</span><span class="text-xs text-slate-500">08</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#timeline"><i data-lucide="calendar" class="w-4 h-4 text-teal-400"></i><span class="flex-1 text-sm">일정</span><span class="text-xs text-slate-500">09</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#why-us"><i data-lucide="award" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">왜 저희와</span><span class="text-xs text-slate-500">10</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#cta"><i data-lucide="calendar-check" class="w-4 h-4 text-teal-400"></i><span class="flex-1 text-sm">문의하기</span><span class="text-xs text-slate-500">11</span></li>
+      </ul>
+      <div class="flex items-center justify-between px-4 py-2 border-t border-white/10 text-xs text-slate-500"><span>↑↓ 이동</span><span>↵ 선택</span><span>ESC 닫기</span></div>
+    </div>
+  </div>
+
+  <!-- =========== SIDE PANEL =========== -->
+  <aside id="side-panel" class="fixed right-0 top-0 h-screen w-96 max-w-[90vw] translate-x-full transition-transform duration-300 z-30 backdrop-blur-3xl bg-slate-900/95 border-l border-white/10 shadow-2xl shadow-indigo-500/20 overflow-y-auto">
+    <div class="flex items-center justify-between p-4 border-b border-white/10">
+      <div class="flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i><span class="font-semibold text-sm" id="side-panel-title">대응 방법</span></div>
+      <button id="side-panel-close" class="p-1.5 rounded-lg hover:bg-white/10" aria-label="닫기"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div id="side-panel-body" class="p-6"></div>
+  </aside>
+
+  <!-- =========== FOOTER =========== -->
+  <footer class="border-t border-white/10 mt-20 py-10 text-center text-sm text-slate-500">
+    <div class="max-w-7xl mx-auto px-6">
+      <p>이 페이지는 위시켓 프로젝트 <span class="font-mono text-indigo-400">#156936</span> (EDEN OS · 이든철강 통합 운영 시스템) 지원용 레퍼런스 UI입니다. 실제 서비스가 아니며 화면의 숫자는 이해를 돕기 위한 예시입니다.</p>
+      <p class="mt-2">Generated by <span class="font-mono">wishket-refui</span> · 일반 고객용 · Last updated: 2026-07-18 · <a href="../it.html" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">IT 담당자용 버전</a></p>
+    </div>
+  </footer>
+
+  <script src="./client.js"></script>
+  <script>
+    (function () {
+      if (typeof Chart === 'undefined') return;
+      Chart.defaults.color = 'rgba(241,245,249,0.7)';
+      Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+      Chart.defaults.font.family = 'Pretendard Variable, system-ui, sans-serif';
+      const commonOpts = (extra = {}) => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(2,6,23,0.95)', borderColor: 'rgba(99,102,241,0.3)', borderWidth: 1, padding: 12 } }, ...extra });
+
+      const trendEl = document.getElementById('eden-trend');
+      if (trendEl) new Chart(trendEl, {
+        type: 'line',
+        data: { labels: ['2월','3월','4월','5월','6월','7월'], datasets: [{ label: '수주액', data: [820000000,910000000,1005000000,1080000000,1190000000,1284500000], borderColor: '#6366f1', backgroundColor: (ctx) => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,260); g.addColorStop(0,'rgba(99,102,241,0.3)'); g.addColorStop(1,'rgba(99,102,241,0)'); return g; }, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 5 }] },
+        options: commonOpts({ scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: (v) => (v/1e8).toFixed(1) + '억' } } } }),
+      });
+
+      const curEl = document.getElementById('eden-currency');
+      if (curEl) new Chart(curEl, { type: 'doughnut', data: { labels: ['국내','일본','기타','호주'], datasets: [{ data: [62,18,8,12], backgroundColor: ['#6366f1','#14b8a6','#38bdf8','#f59e0b'], borderWidth: 0, hoverOffset: 8 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, pointStyle: 'circle' } } } } });
+
+      const radarEl = document.getElementById('eden-radar');
+      if (radarEl) new Chart(radarEl, { type: 'radar', data: { labels: ['철 사용률','원가 정확도','남는 이익','환율 안전','납기 지킴'], datasets: [{ label: '점수', data: [96,88,72,79,91], backgroundColor: 'rgba(99,102,241,0.2)', borderColor: '#6366f1', borderWidth: 2, pointBackgroundColor: '#14b8a6', pointBorderColor: '#fff', pointRadius: 5, pointHoverRadius: 7 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: 'rgba(255,255,255,0.1)' }, grid: { color: 'rgba(255,255,255,0.08)' }, pointLabels: { font: { size: 12 }, color: '#cbd5e1' }, ticks: { backdropColor: 'transparent', color: '#64748b', stepSize: 20 }, suggestedMin: 0, suggestedMax: 100 } } } });
+
+      const sparkEl = document.getElementById('eden-spark');
+      if (sparkEl) { const arr = []; let v = 40; for (let i=0;i<24;i++){ v += (Math.random()-0.35)*7; arr.push(v);} new Chart(sparkEl, { type:'line', data:{ labels:Array.from({length:24},(_,i)=>i), datasets:[{ data:arr, borderColor:'#14b8a6', borderWidth:1.5, fill:false, tension:0.4, pointRadius:0 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{enabled:false} }, scales:{ x:{display:false}, y:{display:false} } } }); }
+
+      const EDEN_RISKS = [
+        { id:'1', name:'절단 계산이 복잡할 수 있음', x:3.0, y:3.0, score:9, strategy:'가장 어려운 절단 계산을 계약 초기 1주에 먼저 맞춰봅니다(선검증). 복잡한 방식(철판 오려내기)은 별도 협의로 분리합니다.' },
+        { id:'2', name:'할 일이 많아 벅찰 수 있음', x:2.8, y:3.0, score:9, strategy:'한 번에 다 하기보다 단계로 나눠(1→2→3차) 품질과 비용을 안정시킵니다.' },
+        { id:'3', name:'엑셀 양식 확보가 늦어질 수 있음', x:3.0, y:2.82, score:9, strategy:'착수 직후 반나절 엑셀 양식 워크숍으로 필요한 양식을 먼저 확보합니다.' },
+        { id:'4', name:'합격 기준이 모호할 수 있음', x:3.0, y:2.05, score:6, strategy:'합격 기준(목표 사용률·계산 시간)을 계약서에 숫자로 미리 적어 분쟁을 막습니다.' },
+        { id:'5', name:'더존 연동 범위 오해', x:2.78, y:2.0, score:6, strategy:'"이번엔 준비만, 실제 연결은 별도"임을 계약서에 분명히 적습니다.' },
+        { id:'6', name:'성적서 양식이 많을 수 있음', x:2.6, y:2.15, score:6, strategy:'워크숍에서 양식을 모두 모으고, 몇 종까지 포함할지 미리 정합니다.' },
+        { id:'7', name:'혼자 개발이라 부담', x:3.12, y:1.95, score:6, strategy:'단계로 나눠 일을 고르게 배분하고, 문서·기록을 계속 남겨 안전망을 만듭니다.' },
+        { id:'8', name:'개발 도구 적응 시간', x:2.0, y:3.05, score:6, strategy:'착수 전 준비 기간을 두어, 초반 속도 저하를 최소화합니다.' },
+        { id:'9', name:'과거 데이터 옮기기', x:2.0, y:2.0, score:4, strategy:'기본은 신규 입력과 기본 정보만. 과거 자료 대량 이관은 별도로 계산합니다.' },
+        { id:'10', name:'원가 계산 기준 미정', x:1.82, y:2.12, score:4, strategy:'쓰시는 원가분석표를 기준으로 항목과 배분 방식을 함께 확정합니다.' },
+        { id:'12', name:'서버 위치 미정', x:2.15, y:1.85, score:4, strategy:'개발사 서버든 회사 서버든 양쪽 다 대응할 수 있게 준비합니다.' },
+        { id:'13', name:'\'MCS\' 뜻 미확정', x:1.72, y:1.88, score:4, strategy:'뜻과 예시를 먼저 확인해 생산·품질 화면을 정확히 설계합니다.' },
+      ];
+      const riskEl = document.getElementById('eden-risks');
+      if (riskEl) {
+        const groups = { danger:{label:'큼',data:[],backgroundColor:'rgba(239,68,68,0.85)',borderColor:'#ef4444'}, warn:{label:'중간',data:[],backgroundColor:'rgba(245,158,11,0.85)',borderColor:'#f59e0b'}, info:{label:'작음',data:[],backgroundColor:'rgba(100,116,139,0.85)',borderColor:'#64748b'} };
+        EDEN_RISKS.forEach((r) => { const g = r.score >= 7 ? 'danger' : (r.score >= 4 ? 'warn' : 'info'); groups[g].data.push({ x:r.x, y:r.y, ...r }); });
+        new Chart(riskEl, {
+          type: 'scatter', data: { datasets: Object.values(groups).map((ds) => ({ ...ds, pointRadius: 11, pointHoverRadius: 15, borderWidth: 2 })) },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            onClick: (e, els) => { if (!els.length || !window.openSidePanel) return; const el = els[0]; const pt = e.chart.data.datasets[el.datasetIndex].data[el.index]; window.openSidePanel(pt.name, `<div class="space-y-3"><div class="rounded-lg p-3 bg-white/5 border border-white/10"><div class="text-xs text-slate-400 mb-1">얼마나 자주 × 얼마나 크게</div><div class="text-lg font-bold">${['','작게','중간','자주'][Math.round(pt.y)]} × ${['','작게','중간','크게'][Math.round(pt.x)]}</div></div><div><div class="text-xs text-slate-400 mb-1">저희 대응 방법</div><p class="text-sm text-slate-200 leading-relaxed">${pt.strategy}</p></div></div>`); },
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.name}` } } },
+            scales: { x: { title: { display: true, text: '얼마나 크게 →' }, min: 0.5, max: 3.5, ticks: { stepSize: 1, callback: (v) => ['','작게','중간','크게'][v] || '' }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { title: { display: true, text: '얼마나 자주 →' }, min: 0.5, max: 3.5, ticks: { stepSize: 1, callback: (v) => ['','작게','중간','자주'][v] || '' }, grid: { color: 'rgba(255,255,255,0.04)' } } },
+          },
+        });
+      }
+
+      const mat = document.getElementById('eden-mat'); const yieldEl = document.getElementById('eden-yield');
+      const matDisp = document.getElementById('eden-mat-display'); const yieldDisp = document.getElementById('eden-yield-display'); const saveEl = document.getElementById('eden-save');
+      if (mat && yieldEl && saveEl) {
+        const upd = () => { const m = +mat.value; const y = +yieldEl.value; if (matDisp) matDisp.textContent = m + '억'; if (yieldDisp) yieldDisp.textContent = y.toFixed(1) + '%p'; saveEl.textContent = Math.round(m * 100000000 * (y / 100)).toLocaleString('ko-KR'); };
+        mat.addEventListener('input', upd); yieldEl.addEventListener('input', upd); upd();
+      }
+    })();
+  </script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

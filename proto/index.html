@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>철강 통합 운영 시스템 (EDEN OS) — 라이브 프로토타입 (#156936)</title>
+  <meta name="description" content="이든철강 통합 운영 시스템(EDEN OS) 클릭 가능한 관리자 콘솔 프로토타입 — 전 화면(경영·공통·수주/CP·생산/품질/유통·자금/손익)" />
+
+  <!-- Pretendard (한글 최적화) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN (JIT) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: {
+        sans: ['"Pretendard Variable"', 'Pretendard', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'SF Mono', 'monospace'],
+      } } },
+    };
+  </script>
+
+  <!-- React 18 + Babel (proto 트랙 전용) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body {
+      font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+      background: #020617; color: #f1f5f9; -webkit-font-smoothing: antialiased; min-height: 100vh;
+    }
+    .font-mono, code, .tabular { font-family: 'JetBrains Mono', monospace; }
+    .aurora-bg { position: fixed; inset: 0; z-index: -10; background: #020617; }
+    .aurora-bg::before {
+      content: ''; position: absolute; inset: 0; opacity: 0.08;
+      background:
+        radial-gradient(at 15% 25%, rgba(99,102,241,0.45), transparent 50%),
+        radial-gradient(at 85% 75%, rgba(20,184,166,0.30), transparent 50%);
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .scr { animation: fadeUp 0.32s ease-out; }
+    /* NestView 잔재 회색 해치 패턴 */
+    .scrap-hatch {
+      background-image: repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 3px, transparent 3px, transparent 7px);
+      background-color: rgba(71,85,105,0.25);
+    }
+    ::-webkit-scrollbar { width: 9px; height: 9px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.28); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.5); }
+    .mobile-guard { display: none; }
+    @media (max-width: 1023px) {
+      .mobile-guard {
+        display: flex; position: fixed; inset: 0; z-index: 100;
+        background: rgba(2,6,23,0.95); backdrop-filter: blur(20px);
+        align-items: center; justify-content: center; padding: 2rem; text-align: center;
+      }
+      .app-root { filter: blur(4px); pointer-events: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="aurora-bg" aria-hidden="true"></div>
+
+  <!-- 데이터 + 컴포넌트 + 화면 (순서 중요) -->
+  <script src="./data.js"></script>
+  <script type="text/babel" src="./components.jsx"></script>
+  <script type="text/babel" src="./tweaks-panel.jsx"></script>
+  <script type="text/babel" src="./dashboard.jsx"></script>
+  <script type="text/babel" src="./console.jsx"></script>
+  <script type="text/babel" src="./history.jsx"></script>
+  <script type="text/babel" src="./templates.jsx"></script>
+  <!-- 확장 화면(전 화면 커버) -->
+  <script type="text/babel" src="./screens-common.jsx"></script>
+  <script type="text/babel" src="./screens-order.jsx"></script>
+  <script type="text/babel" src="./screens-production.jsx"></script>
+  <script type="text/babel" src="./screens-logistics.jsx"></script>
+  <script type="text/babel" src="./screens-finance.jsx"></script>
+
+  <!-- App shell -->
+  <div id="app-root" class="app-root"></div>
+
+  <!-- 모바일 가드 오버레이 -->
+  <div class="mobile-guard">
+    <div class="rounded-2xl bg-slate-900 border border-slate-700 p-8 max-w-sm">
+      <div class="text-2xl mb-3">🖥</div>
+      <h2 class="text-lg font-bold mb-2">데스크탑에서 열어주세요</h2>
+      <p class="text-sm text-slate-400">
+        본 프로토타입은 1024px 이상 해상도에서 최적화되어 있습니다.<br>
+        텍스트만 보시려면 <a href="../refui/" class="text-indigo-400 underline">레퍼런스 UI</a>를 이용해주세요.
+      </p>
+    </div>
+  </div>
+
+  <!-- 데모 데이터 가드 배지 (필수) -->
+  <div class="fixed bottom-3 left-3 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 font-medium backdrop-blur-xl">
+    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+    데모 데이터 · 실데이터 미연결 (가상 수치)
+  </div>
+
+  <!-- App mount -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // 화면 레지스트리 — 라우트 key → { label, global(window 컴포넌트명) }
+    // ⚠️ 기존 4화면은 demo/자동시연.html 호환 위해 key 유지(dashboard·console·history·settings)
+    const REGISTRY = {
+      dashboard:  { label: '경영 대시보드',   global: 'Dashboard'  },
+      home:       { label: '부서별 홈',       global: 'Home'       },
+      rbac:       { label: '계정·권한(RBAC)', global: 'Rbac'       },
+      partners:   { label: '거래처 마스터',   global: 'Partners'   },
+      fx:         { label: '환율 연동',       global: 'Fx'         },
+      history:    { label: '프로젝트 이력',   global: 'History'    },
+      quotation:  { label: '견적·예상원가',   global: 'Quotation'  },
+      console:    { label: '절단계획(CP) 콘솔', global: 'Console'  },
+      mills:      { label: '제강사 단가 비교', global: 'Mills'     },
+      order:      { label: '수주확정·발주',   global: 'Order'      },
+      production: { label: '작업지시·생산',   global: 'Production' },
+      quality:    { label: '시험성적서·품질', global: 'Quality'    },
+      defect:     { label: '불량·클레임',     global: 'Defect'     },
+      shipping:   { label: '출하·거래명세서', global: 'Shipping'   },
+      trading:    { label: '유통 매입/매출',  global: 'Trading'    },
+      finance:    { label: '기성·수금·미수금', global: 'Finance'   },
+      profit:     { label: '최종 손익분석',   global: 'Profit'     },
+      settings:   { label: '문서 템플릿',     global: 'Templates'  },
+    };
+
+    // 그룹형 사이드바
+    const NAV_GROUPS = [
+      { group: '경영', items: [['dashboard', 'chart']] },
+      { group: '공통 기반', items: [
+        ['home', 'home'], ['rbac', 'lock'], ['partners', 'user'], ['fx', 'fx'],
+      ]},
+      { group: '1차 · 수주 / CP', items: [
+        ['history', 'layers'], ['quotation', 'doc'], ['console', 'scissors'],
+        ['mills', 'grid'], ['order', 'check'],
+      ]},
+      { group: '2차 · 생산 / 품질 / 유통', items: [
+        ['production', 'factory'], ['quality', 'shieldCheck'], ['defect', 'alert'],
+        ['shipping', 'ship'], ['trading', 'trend'],
+      ]},
+      { group: '3차 · 자금 / 손익', items: [
+        ['finance', 'coins'], ['profit', 'gauge'],
+      ]},
+      { group: '문서', items: [['settings', 'file']] },
+    ];
+
+    function Fallback({ label }) {
+      return (
+        <div className="max-w-lg">
+          <window.SectionLabel>준비 중</window.SectionLabel>
+          <window.Card className="p-6 mt-3 text-sm text-slate-400">
+            <b className="text-slate-200">{label}</b> 화면 컴포넌트를 불러오지 못했습니다.
+          </window.Card>
+        </div>
+      );
+    }
+
+    function App() {
+      const [tweaks, setTweak] = useTweaks(window.TWEAK_DEFAULTS);
+      const [route, setRoute] = useState({ name: 'dashboard', payload: null });
+      const navigate = (name, payload = null) => setRoute({ name, payload });
+
+      useEffect(() => {
+        window.__navigate = (name) => setRoute({ name, payload: null });
+        window.__setPolicyMode = (v) => setTweak('policyMode', v);
+        return () => { delete window.__navigate; delete window.__setPolicyMode; };
+      }, []);
+      useEffect(() => {
+        document.documentElement.style.setProperty('--brand', tweaks.brandColor);
+      }, [tweaks.brandColor]);
+
+      const entry = REGISTRY[route.name] || REGISTRY.dashboard;
+      const Screen = window[entry.global] || (() => <Fallback label={entry.label} />);
+      const screenLabel = `${entry.label}`;
+
+      return (
+        <div className="min-h-screen flex" style={{ '--brand': tweaks.brandColor }}>
+          {/* Sidebar (솔리드 다크, 그룹형 스크롤) */}
+          <aside className="w-60 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 h-screen sticky top-0">
+            <div className="p-4 pb-2">
+              <div className="flex items-center gap-2.5 px-1">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white shrink-0"
+                     style={{ background: `linear-gradient(135deg, ${tweaks.brandColor}, #14b8a6)` }}>
+                  {(tweaks.brandName || 'E')[0]}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm leading-tight truncate">{tweaks.brandName} · EDEN OS</div>
+                  <div className="text-[10px] text-slate-500 font-mono">#156936 · 통합 운영</div>
+                </div>
+              </div>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-3 pb-3 space-y-4">
+              {NAV_GROUPS.map(({ group, items }) => (
+                <div key={group}>
+                  <div className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">{group}</div>
+                  <div className="space-y-0.5">
+                    {items.map(([key, icon]) => (
+                      <button key={key} onClick={() => navigate(key)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[13px] transition ${
+                          route.name === key
+                            ? 'bg-slate-800 text-white'
+                            : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                        }`}>
+                        <window.Icon name={icon} className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{REGISTRY[key].label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </nav>
+
+            <div className="p-3 border-t border-slate-800">
+              <div className="flex items-center gap-2.5 px-1">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-teal-400 flex items-center justify-center text-xs font-bold text-slate-900">
+                  {tweaks.role[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium truncate">{tweaks.role} 담당</div>
+                  <div className="text-[10px] text-slate-500">RBAC · {window.FINANCE_ROLES.includes(tweaks.role) ? '손익 열람' : '손익 마스킹'}</div>
+                </div>
+              </div>
+              <div className="mt-2 px-1 text-[10px] text-slate-600 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                DB 정상 · 환율 스냅샷 {window.FX_SNAPSHOT.baseDate}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main */}
+          <main className="flex-1 min-w-0 overflow-auto" data-screen-label={screenLabel}>
+            <div className="scr p-8 max-w-[1440px] mx-auto" key={route.name + (route.payload?.projectNo || '')}>
+              <Screen route={route} navigate={navigate} tweaks={tweaks} />
+            </div>
+          </main>
+
+          {/* Tweaks Panel */}
+          <window.TweaksPanel title="EDEN OS Tweaks">
+            <window.TweakSection label="브랜드" />
+            <window.TweakText  label="회사명"    value={tweaks.brandName}  onChange={(v) => setTweak('brandName', v)} />
+            <window.TweakColor label="브랜드 색" value={tweaks.brandColor} onChange={(v) => setTweak('brandColor', v)} />
+
+            <window.TweakSection label="CP 최적화 정책 (Engine)" />
+            <window.TweakRadio label="해 탐색 모드" value={tweaks.policyMode}
+              options={[{ value: '근사', label: '근사 (FFD·수초)' }, { value: '최적', label: '최적 (CP-SAT)' }]}
+              onChange={(v) => setTweak('policyMode', v)} />
+
+            <window.TweakSection label="열람 권한 (C-RBAC)" />
+            <window.TweakRadio label="부서" value={tweaks.role}
+              options={[{ value: '구매', label: '구매' }, { value: '자금', label: '자금' }, { value: '대표', label: '대표' }]}
+              onChange={(v) => setTweak('role', v)} />
+
+            <window.TweakSection label="표시" />
+            <window.TweakToggle label="신뢰 표기 배지" value={tweaks.showTrustBadges} onChange={(v) => setTweak('showTrustBadges', v)} />
+            <window.TweakRadio label="밀도" value={tweaks.density}
+              options={['compact', 'regular', 'comfy']} onChange={(v) => setTweak('density', v)} />
+          </window.TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app-root')).render(<App />);
+  </script>
+</body>
+</html>

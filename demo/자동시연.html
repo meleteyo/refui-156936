@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>철강 통합 운영 시스템 (EDEN OS) · 1:30 자동 시연</title>
+
+  <!-- Pretendard (한글 최적화) -->
+  <link href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: #000; color: #f1f5f9;
+      font-family: 'Pretendard Variable', system-ui, sans-serif;
+      overflow: hidden;
+    }
+    .stage { position: fixed; inset: 0; display: flex; flex-direction: column; }
+    .frame-wrap { flex: 1; position: relative; overflow: hidden; background: #020617; }
+    iframe {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 1440px; height: 900px;
+      border: 0;
+    }
+
+    .caption {
+      position: absolute; left: 50%; bottom: 80px;
+      transform: translateX(-50%);
+      max-width: 720px; padding: 18px 28px;
+      background: rgba(2, 6, 23, 0.92);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 12px 60px rgba(168, 85, 247, 0.25);
+      backdrop-filter: blur(8px);
+      opacity: 0; transition: opacity 0.5s ease;
+      z-index: 10;
+    }
+    .caption.show { opacity: 1; }
+    .caption .step-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 0.1em;
+      color: #c4b5fd; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .caption .step-text { font-size: 18px; line-height: 1.55; color: #f1f5f9; font-weight: 500; }
+
+    .topbar { display: flex; align-items: center; gap: 16px; padding: 14px 24px; background: #0f172a; border-bottom: 1px solid rgba(255,255,255,0.08); z-index: 20; }
+    .topbar h1 { margin: 0; font-size: 14px; font-weight: 600; color: #f1f5f9; }
+    .topbar .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; }
+
+    .progress-track { flex: 1; max-width: 400px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); width: 0%; transition: width 0.3s ease; }
+    .timecode { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #94a3b8; min-width: 80px; text-align: right; }
+
+    .controls { display: flex; gap: 8px; }
+    .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #f1f5f9; font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .btn:hover { background: rgba(168,85,247,0.2); border-color: rgba(168,85,247,0.4); }
+    .btn.primary { background: linear-gradient(135deg, #a855f7, #ec4899); border: none; font-weight: 600; }
+
+    .fake-cursor { position: absolute; width: 32px; height: 32px; pointer-events: none; z-index: 30; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8)); opacity: 0; }
+    .fake-cursor.show { opacity: 1; }
+    .click-pulse { position: absolute; pointer-events: none; z-index: 29; width: 56px; height: 56px; border: 3px solid #a855f7; border-radius: 50%; transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+    .click-pulse.fire { animation: pulse 0.6s ease-out; }
+    @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } }
+
+    .rec-hint { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.4); color: #fca5a5; font-size: 12px; font-family: 'JetBrains Mono', monospace; display: none; align-items: center; gap: 8px; z-index: 15; }
+    .rec-hint.show { display: flex; }
+    .rec-hint::before { content: ''; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.3; } }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="topbar">
+      <h1>철강 통합 운영 시스템 (EDEN OS) · 자동 시연</h1>
+      <span class="meta">위시켓 #156936</span>
+      <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+      <span class="timecode" id="timecode">0:00 / 1:30</span>
+      <div class="controls">
+        <button class="btn" id="btn-restart">↻ 처음부터</button>
+        <button class="btn primary" id="btn-play">▶ 재생</button>
+      </div>
+    </div>
+
+    <div class="frame-wrap">
+      <div class="rec-hint" id="rec-hint">REC · ⌘⇧5로 화면 녹화 시작 후 ▶ 재생을 눌러주세요</div>
+      <!-- proto 경로: 로컬은 ../proto/index.html, 배포 시 deploy.sh 가 보정 -->
+      <iframe id="proto" src="../proto/index.html"></iframe>
+
+      <svg class="fake-cursor" id="cursor" viewBox="0 0 24 24">
+        <path d="M3 3 L3 19 L8 14 L11 21 L14 20 L11 13 L18 13 Z" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/>
+      </svg>
+      <div class="click-pulse" id="pulse"></div>
+
+      <div class="caption" id="caption">
+        <div class="step-label" id="caption-label">STEP 0</div>
+        <div class="step-text" id="caption-text">로딩 중…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Demo timeline 설정 =====
+    // 90000ms(1:30) 동안 EDEN OS 4화면(dashboard·console·history·settings)을 순환
+    const TOTAL_MS = 90000;
+
+    const iframe = document.getElementById('proto');
+    const captionEl = document.getElementById('caption');
+    const captionLabel = document.getElementById('caption-label');
+    const captionText = document.getElementById('caption-text');
+    const cursor = document.getElementById('cursor');
+    const pulse = document.getElementById('pulse');
+    const progress = document.getElementById('progress');
+    const timecode = document.getElementById('timecode');
+    const recHint = document.getElementById('rec-hint');
+
+    let playing = false;
+    let startTime = 0;
+    let rafId = null;
+
+    const fmt = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
+    const setCaption = (label, text) => { captionLabel.textContent = label; captionText.textContent = text; captionEl.classList.add('show'); };
+    const hideCaption = () => captionEl.classList.remove('show');
+    const navIframe = (name) => { try { const win = iframe.contentWindow; if (win && win.__navigate) win.__navigate(name); } catch (e) { console.warn('nav failed', e); } };
+    const moveCursor = (x, y) => { cursor.style.left = (x - 16) + 'px'; cursor.style.top = (y - 16) + 'px'; cursor.classList.add('show'); };
+    const clickAt = (x, y) => { pulse.style.left = x + 'px'; pulse.style.top = y + 'px'; pulse.classList.remove('fire'); void pulse.offsetWidth; pulse.classList.add('fire'); };
+    const hideCursor = () => cursor.classList.remove('show');
+
+    // ===== Timeline (EDEN OS 도메인 · 12 step / 90초) =====
+    // 각 step: { at: ms, label, text, action?: () => void }
+    // 화면당 캡션 2~4개 · 사이드바 전환에만 fake cursor 사용
+    const timeline = [
+      { at: 500,   label: 'INTRO · 0:00',        text: '위시켓 156936 이든철강 통합 운영 시스템 EDEN OS입니다. 모두 데모 데이터이며, 4개 화면 관리자 콘솔을 차례로 보여드립니다.' },
+      { at: 7000,  label: '01 · 경영 대시보드',   text: '경영 대시보드 — 수주·생산·자금·손익 4대 KPI와 실시간 환율 스냅샷을 대표이사가 한 화면에서 확인합니다.' },
+      { at: 13000, label: '01 · 수주 파이프라인', text: '⑧ 수주 파이프라인 — 견적부터 출하까지 단계별 건수·금액을 집계하고, 카드를 누르면 상태별 이력으로 드릴다운됩니다.' },
+      { at: 19000, label: '01 · 환리스크 레이더', text: '⑨ 환리스크 레이더 — 미수 외화가 환율 −2% 시 얼마의 손실 위험인지 통화별로 경고합니다. 자금·대표 권한만 열람합니다.' },
+      { at: 26000, label: '02 · CP 콘솔 STEP 1',  text: '절단계획(CP) 콘솔로 이동합니다. 1단계 — BH 절단 엑셀을 올리면 702개 부재 규격이 자동으로 전개됩니다.',
+        action: () => { navIframe('console'); moveCursor(105, 300); clickAt(105, 300); } },
+      { at: 34000, label: '02 · STEP 2 What-if',  text: '2단계 — 모재 길이를 슬라이더로 바꾸면 미리보기 수율이 즉시 계산됩니다. 무조건 길다고 유리하지 않다는 걸 보여줍니다.' },
+      { at: 42000, label: '02 · STEP 3 정책 ★',   text: '핵심입니다 — Tweaks에서 근사(FFD 92.6%·18본)를 최적(CP-SAT 98.0%·17본)으로 바꾸면 결과가 실제로 달라집니다.' },
+      { at: 51000, label: '02 · STEP 4 결과·확정', text: '4단계 — 절단배열 NestView와 수율→금액 환산, 해 신뢰 표기까지. 검토 항목을 모두 체크해야 확정 게이트가 열립니다.' },
+      { at: 61000, label: '03 · 프로젝트 이력',    text: '프로젝트 이력 — EDN-2026-0031은 최적 탐색이 10초를 초과해 근사해로 자동 대체된 뒤 확정된 케이스입니다.',
+        action: () => { navIframe('history'); moveCursor(105, 340); clickAt(105, 340); } },
+      { at: 69000, label: '03 · 여정 상세 패널',   text: '행을 누르면 7단계 여정·절단 결과·손익·감사 로그가 사이드 패널로 열립니다. 손익은 자금·대표 권한만 표시됩니다.' },
+      { at: 77000, label: '04 · 문서 템플릿',      text: '문서 템플릿 — 견적서·발주서·거래명세서를 편집하면 우측 A4 미리보기에 브랜드 색까지 즉시 반영됩니다.',
+        action: () => { navIframe('settings'); moveCursor(105, 380); clickAt(105, 380); } },
+      { at: 84000, label: 'OUTRO',                text: '대시보드부터 절단계획·이력·문서까지 4개 화면을 보셨습니다. 30분 미팅에서 더 자세히 설명드리겠습니다. 감사합니다.',
+        action: () => { navIframe('dashboard'); hideCursor(); } },
+    ];
+
+    let timeline_fired = new Set();
+
+    function tick() {
+      if (!playing) return;
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, (elapsed / TOTAL_MS) * 100);
+      progress.style.width = pct + '%';
+      timecode.textContent = `${fmt(elapsed)} / 1:30`;
+
+      for (const step of timeline) {
+        if (elapsed >= step.at && !timeline_fired.has(step.at)) {
+          timeline_fired.add(step.at);
+          if (step.action) try { step.action(); } catch (e) {}
+          setCaption(step.label, step.text);
+        }
+      }
+
+      if (elapsed >= TOTAL_MS) {
+        playing = false;
+        document.getElementById('btn-play').textContent = '▶ 재생';
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function play() {
+      if (playing) {
+        playing = false;
+        cancelAnimationFrame(rafId);
+        document.getElementById('btn-play').textContent = '▶ 재생';
+        recHint.classList.remove('show');
+        return;
+      }
+      timeline_fired.clear();
+      navIframe('dashboard');
+      progress.style.width = '0%';
+      hideCaption();
+      setTimeout(() => {
+        playing = true;
+        startTime = Date.now();
+        document.getElementById('btn-play').textContent = '⏸ 일시정지';
+        recHint.classList.add('show');
+        setTimeout(() => recHint.classList.remove('show'), 4000);
+        tick();
+      }, 300);
+    }
+
+    function restart() {
+      playing = false;
+      cancelAnimationFrame(rafId);
+      timeline_fired.clear();
+      navIframe('dashboard');
+      progress.style.width = '0%';
+      timecode.textContent = '0:00 / 1:30';
+      hideCaption();
+      hideCursor();
+      document.getElementById('btn-play').textContent = '▶ 재생';
+    }
+
+    document.getElementById('btn-play').addEventListener('click', play);
+    document.getElementById('btn-restart').addEventListener('click', restart);
+
+    iframe.addEventListener('load', () => {
+      setTimeout(() => {
+        setCaption('READY', '▶ 재생 버튼을 눌러 자동 시연을 시작하세요. ⌘⇧5로 화면 녹화 가능.');
+      }, 800);
+    });
+  </script>
+</body>
+</html>

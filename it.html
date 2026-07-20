@@ -1,0 +1,1388 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EDEN OS — 철강 통합 운영 시스템 · 레퍼런스 UI (IT)</title>
+  <meta name="description" content="이든철강 전용 통합 운영 시스템(EDEN OS) — BH Cutting Plan(폭 방향 배열·스트리핑) 중심의 수주·발주·생산·품질·출하·손익 파이프라인. Django + Celery + OR-Tools 설계 완료. IT 담당자용 레퍼런스 UI." />
+  <meta property="og:title" content="EDEN OS — 철강 통합 운영 시스템 (IT)" />
+  <meta property="og:type" content="website" />
+
+  <!-- Tailwind CSS (CDN, JIT) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Pretendard Variable"', 'Pretendard', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'SF Mono', 'Menlo', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Pretendard (한글 최적화) + JetBrains Mono (숫자·코드) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Prism.js (코드 하이라이트, Python) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+
+  <link rel="stylesheet" href="./styles.css" />
+
+  <style>
+    :root { --project-id: 156936; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+      background: #020617;
+      color: #f1f5f9;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Aurora gradient mesh — 인디고(FLANGE) · 틸(WEB) 도메인 톤 */
+    .aurora-bg { position: fixed; inset: 0; z-index: -10; background: #020617; }
+    .aurora-bg::before {
+      content: ''; position: absolute; inset: 0; opacity: 0.42;
+      background:
+        radial-gradient(at 15% 22%, rgba(99,102,241,0.35), transparent 50%),
+        radial-gradient(at 85% 72%, rgba(20,184,166,0.26), transparent 50%),
+        radial-gradient(at 52% 48%, rgba(56,189,248,0.14), transparent 45%),
+        radial-gradient(at 10% 92%, rgba(139,92,246,0.12), transparent 40%);
+    }
+    @supports (animation-timeline: view()) {
+      .scroll-reveal { animation: slideUp 0.8s ease-out; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+    /* NestView 절단 블록 */
+    .nest-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+    .nest-flange { background: linear-gradient(180deg, rgba(99,102,241,0.85), rgba(79,70,229,0.7)); }
+    .nest-web { background: linear-gradient(180deg, rgba(20,184,166,0.85), rgba(13,148,136,0.7)); }
+    .nest-scrap {
+      background-image: repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 4px, rgba(148,163,184,0.12) 4px, rgba(148,163,184,0.12) 8px);
+    }
+    .nest-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #f8fafc; border-right: 1px solid rgba(2,6,23,0.4); }
+    .nest-seg:last-child { border-right: none; }
+  </style>
+</head>
+
+<body data-client-type="it" data-domain="steel">
+  <div class="aurora-bg" aria-hidden="true"></div>
+
+  <!-- =========== HEADER =========== -->
+  <header class="sticky top-0 z-20 backdrop-blur-xl bg-slate-950/70 border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+      <a href="#top" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-teal-500 to-cyan-400 shadow-lg shadow-indigo-500/30"></div>
+        <div class="hidden sm:block">
+          <div class="font-bold text-base leading-tight">EDEN OS</div>
+          <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+            <span>WISHKET</span>
+            <span class="font-mono text-indigo-400">#156936</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 기술 키워드 뱃지 (IT) -->
+      <div class="hidden xl:flex items-center gap-2 text-[11px]">
+        <span class="rounded-full px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-mono">Width-Nesting</span>
+        <span class="rounded-full px-2.5 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-300 font-mono">Django + Celery</span>
+        <span class="rounded-full px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-mono">OR-Tools CP-SAT</span>
+        <span class="rounded-full px-2.5 py-1 bg-white/5 border border-white/10 text-slate-300 font-mono">RSM 21 Objects</span>
+      </div>
+
+      <nav class="hidden lg:flex xl:hidden items-center gap-4 text-sm text-slate-400">
+        <a href="#core" class="hover:text-indigo-400 transition">CP</a>
+        <a href="#portfolio" class="hover:text-indigo-400 transition">대시보드</a>
+        <a href="#engine" class="hover:text-indigo-400 transition">손익엔진</a>
+        <a href="#risks" class="hover:text-indigo-400 transition">리스크</a>
+        <a href="#architecture" class="hover:text-indigo-400 transition">아키텍처</a>
+        <a href="#timeline" class="hover:text-indigo-400 transition">일정</a>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <button id="cmdk-trigger" class="hidden sm:flex items-center gap-2 text-sm text-slate-400 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i>
+          <span>검색</span>
+          <kbd class="font-mono text-xs px-1.5 py-0.5 rounded bg-white/10 text-slate-300">⌘K</kbd>
+        </button>
+        <a href="../nonit.html" class="hidden md:inline-flex rounded-xl px-3 py-2 text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition">일반용 버전</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========== HERO =========== -->
+  <section id="top" class="relative max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-10">
+    <div class="max-w-4xl">
+      <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 mb-6">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+        </span>
+        레퍼런스 UI · IT 담당자용 · 제안서 참조
+      </div>
+
+      <h1 class="text-4xl md:text-6xl font-bold leading-[1.08] tracking-tight">
+        폭 배열 절단계획부터 손익까지,<br/>
+        <span class="bg-gradient-to-r from-indigo-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+          CP를 축으로 연결한 철강 통합 운영
+        </span>
+      </h1>
+      <p class="mt-6 text-lg md:text-xl text-slate-300 max-w-2xl leading-relaxed">
+        Built-Up H Beam 절단계획(CP)을 <span class="text-indigo-300 font-semibold">폭 방향 배열(스트리핑)</span>로 최적화하고,
+        그 출력(폭 배열·할증률·잉여·발주 플레이트)을 발주·생산·품질·출하·수금·손익 전 구간의
+        <span class="text-teal-300 font-semibold">단일 진실원</span>으로 연결합니다. 그리디 폭배정 근사 기본, OR-Tools CP-SAT로 최적해 승격.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#core" class="rounded-xl px-5 py-3 font-semibold bg-gradient-to-r from-indigo-500 to-teal-500 hover:from-indigo-600 hover:to-teal-600 shadow-lg shadow-indigo-500/30 transition">
+          CP 엔진 살펴보기
+        </a>
+        <a href="proto/index.html" class="group inline-flex items-center gap-2 rounded-xl px-5 py-3 font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/25 transition">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          라이브 데모
+          <span class="text-xs opacity-60 group-hover:opacity-100 transition">관리자 콘솔 클릭 가능 →</span>
+        </a>
+        <a href="demo/자동시연.html" class="group inline-flex items-center gap-2 rounded-xl px-5 py-3 font-semibold bg-violet-500/15 border border-violet-500/30 text-violet-200 hover:bg-violet-500/25 transition">
+          <i data-lucide="video" class="w-4 h-4"></i>
+          1분 30초 자동 시연
+          <span class="text-xs opacity-60 group-hover:opacity-100 transition">캡션 + 자동 순환 →</span>
+        </a>
+        <a href="#insights" class="rounded-xl px-5 py-3 text-sm text-slate-300 hover:text-indigo-400 transition">
+          이 프로젝트의 숨은 이슈 →
+        </a>
+      </div>
+
+      <!-- 메타 뱃지 -->
+      <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl">
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10">
+          <div class="text-xs text-slate-400">예산</div>
+          <div class="font-bold text-lg">6,000<span class="text-sm text-slate-400">만원</span></div>
+        </div>
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10">
+          <div class="text-xs text-slate-400">기간</div>
+          <div class="font-bold text-lg">150<span class="text-sm text-slate-400">일 · ≈21주</span></div>
+        </div>
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10">
+          <div class="text-xs text-slate-400">발주사</div>
+          <div class="font-bold text-lg">이든철강<span class="text-sm text-slate-400"> · 대구</span></div>
+        </div>
+        <div class="rounded-xl px-4 py-3 bg-white/5 border border-white/10">
+          <div class="text-xs text-slate-400">마감</div>
+          <div class="font-bold text-lg">2026-07-22</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== HERO INSIGHTS (Top 3) =========== -->
+  <section id="hero-insights" class="max-w-7xl mx-auto px-6 py-10 md:py-16 scroll-reveal">
+    <div class="mb-8">
+      <h2 class="text-2xl md:text-3xl font-bold">이 프로젝트를 이렇게 이해했습니다</h2>
+      <p class="mt-2 text-slate-400">공고를 EPM(요구분석)·RSM(도메인 설계)로 분해하여 도출한 결정 변수 3가지</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:-translate-y-1">
+        <div class="text-xs text-indigo-400 font-mono mb-2">INSIGHT 1 · CP</div>
+        <h3 class="text-xl font-semibold mb-3">절단 최적화의 차원과 양식</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">CP가 길이 절단이 아니라 <span class="text-indigo-300">폭 방향 배열(스트리핑)</span>임을 귀사 실물 엑셀 역공학으로 <span class="text-teal-300">확인</span>했습니다. 남은 변수는 표준 최소폭(예 1501) 강제 비율, 잉여 판재 관리, 에지트림·커프 규칙의 공식화 여부 — 이것이 난도·일정을 가릅니다.</p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:-translate-y-1">
+        <div class="text-xs text-teal-400 font-mono mb-2">INSIGHT 2 · 범위</div>
+        <h3 class="text-xl font-semibold mb-3">범위·예산·일정 정합</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">공통 + 1·2·3차 + QMS는 사실상 <span class="text-teal-300">미니 ERP</span>입니다. 6,000만원/5개월에 일괄인가, <span class="text-teal-300">차수 분리·MVP 우선</span>인가. 더존 연동은 "설계만"인가 "개발 포함"인가가 스코프 경계를 결정합니다.</p>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all hover:-translate-y-1">
+        <div class="text-xs text-cyan-400 font-mono mb-2">INSIGHT 3 · 운영</div>
+        <h3 class="text-xl font-semibold mb-3">배포·이관·운영 조건</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">배포 주체(개발사 클라우드 vs <span class="text-cyan-300">발주사 온프레미스</span>, 데이터 소유권 귀속 연계), 기존 엑셀 데이터 이관 범위, 대구 북구 상주 여부, 그리고 미정의 용어 "MCS"가 인프라·설계 범위를 좌우합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== CORE — BH Cutting Plan =========== -->
+  <section id="core" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+      <div>
+        <div class="text-xs font-mono text-indigo-400 mb-3">01 · CORE ★</div>
+        <h2 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
+          BH Cutting Plan<br/>폭 방향 배열(스트리핑)
+        </h2>
+        <p class="text-lg text-slate-300 mb-6 leading-relaxed">
+          두께·재질별로 WEB/FU/FL 부재를 폭 방향으로 배열해 광폭 플레이트를 발주 <span class="text-indigo-300 font-semibold">할증률(발주중량÷정미중량) 최소화</span>.
+          폭 배정도 NP-hard 조합 최적화이므로, 기본은 <span class="font-mono text-teal-300">First-Fit-Decreasing류 그리디</span> 근사 + 로컬서치,
+          "최적" 요구 시 <span class="font-mono text-cyan-300">OR-Tools CP-SAT</span>로 승격합니다.
+        </p>
+        <ul class="space-y-3 text-slate-300">
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i>
+            <span>두께·재질 그룹 내 부재를 폭으로 병합 배열(FFD류) → 폭 밴드 안에 채우고, 넘치면 새 플레이트 개시</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i>
+            <span>행위 불변식 <span class="font-mono text-xs bg-white/10 px-1.5 py-0.5 rounded">발주폭 == Σ(부재폭×배열수) + 에지트림 + 커프×절단선수</span> (폭 보존) — assert + DB CHECK</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i>
+            <span>방어적 밸리데이션: max(부재폭)+에지 ≤ 밴드 상한 위반 시 배치불가, 시간초과 시 근사 최선해 + <span class="font-mono text-xs">solution_type</span> 표기</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0"></i>
+            <span>확정 CP(<span class="font-mono text-xs">is_confirmed</span>)만 수주 확정 허용 — CP 출력이 발주·생산·손익의 단일 진실원</span>
+          </li>
+        </ul>
+
+        <!-- CP 4-step flow -->
+        <div class="mt-8 flex items-center gap-2 text-xs">
+          <span class="rounded-lg px-3 py-2 bg-indigo-500/15 border border-indigo-500/25 text-indigo-200">① 엑셀 업로드</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span class="rounded-lg px-3 py-2 bg-indigo-500/15 border border-indigo-500/25 text-indigo-200">② FLANGE/WEB 전개</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span class="rounded-lg px-3 py-2 bg-teal-500/15 border border-teal-500/25 text-teal-200">③ 네스팅 최적화</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span class="rounded-lg px-3 py-2 bg-cyan-500/15 border border-cyan-500/25 text-cyan-200">④ 확정 · 잠금</span>
+        </div>
+      </div>
+
+      <!-- NestView 절단배열 시각화 -->
+      <div class="rounded-3xl backdrop-blur-3xl bg-slate-900/80 border border-white/10 shadow-2xl shadow-indigo-500/20 overflow-hidden">
+        <div class="flex items-center justify-between gap-3 p-4 border-b border-white/10 bg-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center">
+              <i data-lucide="scissors" class="w-4 h-4 text-white"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-sm">NestView · 폭 배열</div>
+              <div class="text-xs text-slate-400 font-mono">EDN-2026-0031 · 발주폭 2,825mm</div>
+            </div>
+          </div>
+          <span class="rounded-full px-2.5 py-1 text-[11px] bg-slate-500/20 text-slate-300 border border-white/10">solution_type: 근사</span>
+        </div>
+
+        <div class="p-6 space-y-3">
+          <!-- 발주 플레이트 (폭 단면) — 부재 스트립을 폭 방향으로 배열 -->
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span class="font-mono">플레이트 P1 · 발주폭 2,825</span><span>잉여 0mm · 할증률 1.02</span></div>
+            <div class="nest-bar">
+              <div class="nest-seg nest-web" style="width:24.7%">SM-005 ×4열</div>
+              <div class="nest-seg nest-web" style="width:24.7%"></div>
+              <div class="nest-seg nest-web" style="width:24.7%"></div>
+              <div class="nest-seg nest-web" style="width:24.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span class="font-mono">플레이트 P2 · 발주폭 2,825</span><span>2개 마크 폭 병합 · 잉여 0mm</span></div>
+            <div class="nest-bar">
+              <div class="nest-seg nest-web" style="width:74.1%">SM-004 ×3열</div>
+              <div class="nest-seg nest-flange" style="width:24.7%">SM-003 ×1</div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span class="font-mono">플레이트 P3 · 발주폭 2,825</span><span>2개 마크 폭 병합 · 잉여 0mm</span></div>
+            <div class="nest-bar">
+              <div class="nest-seg nest-flange" style="width:24.7%">SM-002 ×1</div>
+              <div class="nest-seg nest-web" style="width:74.1%">SM-001 ×3열</div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1"><span class="font-mono">근사(병합 미적용)</span><span class="text-amber-300">폭716 → 최소폭 1501 강제 · 잉여 785</span></div>
+            <div class="nest-bar">
+              <div class="nest-seg nest-web" style="width:47.7%">SM-003 ×1</div>
+              <div class="nest-seg nest-scrap" style="width:52.3%">잉여폭 785</div>
+            </div>
+          </div>
+
+          <!-- legend -->
+          <div class="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded nest-web inline-block"></span>부재 스트립</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded nest-flange inline-block"></span>병합 마크</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded nest-scrap inline-block"></span>잉여폭(재사용)</span>
+          </div>
+        </div>
+
+        <!-- CP result stats -->
+        <div class="grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 bg-white/5">
+          <div class="p-4 text-center">
+            <div class="text-xs text-slate-400 mb-1">할증률 V (최적)</div>
+            <div class="text-2xl font-bold text-teal-300"><span data-countup-decimal="1.028">0</span></div>
+          </div>
+          <div class="p-4 text-center">
+            <div class="text-xs text-slate-400 mb-1">초과 발주(잉여)</div>
+            <div class="text-2xl font-bold"><span data-countup="767">0</span><span class="text-base text-slate-400">kg</span></div>
+          </div>
+          <div class="p-4 text-center">
+            <div class="text-xs text-slate-400 mb-1">발주 매수</div>
+            <div class="text-2xl font-bold"><span data-countup="4">0</span><span class="text-base text-slate-400">매</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== PORTFOLIO — 경영 대시보드 =========== -->
+  <section id="portfolio" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="text-xs font-mono text-teal-400 mb-3">02 · DASHBOARD</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">경영 통합 대시보드</h2>
+      <p class="mt-3 text-lg text-slate-300">수주·수율·미수금(환율 반영)·손익을 원화 기준 한 화면에 · ECharts 윈도우함수 집계</p>
+    </div>
+
+    <!-- Bento KPIs -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+      <div class="col-span-2 md:col-span-2 md:row-span-2 rounded-3xl p-8 backdrop-blur-3xl bg-gradient-to-br from-indigo-500/20 to-teal-500/10 border border-indigo-500/20 relative overflow-hidden">
+        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-indigo-500/10 blur-3xl"></div>
+        <div class="relative">
+          <div class="text-sm text-slate-400 mb-2">진행 중 프로젝트 수주액</div>
+          <div class="text-5xl md:text-6xl font-bold leading-none">
+            ₩<span data-countup="1284500000">0</span>
+          </div>
+          <div class="mt-4 flex items-center gap-2 text-teal-300">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <span class="font-semibold">+8.4%</span>
+            <span class="text-slate-400 text-sm">전월 대비</span>
+          </div>
+          <div class="mt-6 flex items-center gap-3 text-xs text-slate-400">
+            <span class="rounded-full px-2 py-0.5 bg-white/5 border border-white/10">국내 14건</span>
+            <span class="rounded-full px-2 py-0.5 bg-white/5 border border-white/10">일본 4건</span>
+            <span class="rounded-full px-2 py-0.5 bg-white/5 border border-white/10">호주 2건</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">이번 달 스크랩 절감</div>
+        <div class="text-2xl font-bold text-teal-400">+₩<span data-countup="12480000">0</span></div>
+        <div class="mt-3 h-8"><canvas id="eden-spark" class="w-full h-full"></canvas></div>
+      </div>
+
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">평균 절단 수율</div>
+        <div class="text-2xl font-bold text-teal-400">+<span data-countup-decimal="96.2">0</span>%</div>
+        <div class="mt-1 text-xs text-slate-500">목표 95.0% 대비 +1.2%p</div>
+      </div>
+
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">손익 건전성</div>
+        <div class="flex items-baseline gap-2">
+          <div class="text-2xl font-bold"><span data-countup="84">0</span></div>
+          <div class="text-sm text-slate-500">/ 100</div>
+        </div>
+        <div class="mt-2 inline-flex items-center gap-1.5 text-xs rounded-full px-2 py-0.5 bg-teal-500/20 text-teal-400">
+          <span>Grade A−</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="text-xs text-slate-400 mb-1">CP 엑셀 파싱 정확도</div>
+        <div class="text-2xl font-bold text-cyan-400">94<span class="text-base">%</span></div>
+        <div class="mt-1 text-xs text-slate-500">openpyxl 내부 테스트 100건</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div class="lg:col-span-2 rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">월별 수주·손익 추이</h3>
+          <div class="flex items-center gap-1 text-xs">
+            <button class="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300">6M</button>
+            <button class="px-2 py-1 rounded text-slate-500 hover:bg-white/5">1Y</button>
+            <button class="px-2 py-1 rounded text-slate-500 hover:bg-white/5">ALL</button>
+          </div>
+        </div>
+        <div class="h-64"><canvas id="eden-trend"></canvas></div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <h3 class="font-semibold mb-4">통화별 수주 비중</h3>
+        <div class="h-64 flex items-center justify-center"><canvas id="eden-currency"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Project table -->
+    <div class="mt-6 rounded-2xl backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <div class="flex items-center justify-between p-6 border-b border-white/10">
+        <h3 class="font-semibold">진행 프로젝트</h3>
+        <div class="flex items-center gap-2 text-xs text-slate-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>데모 데이터
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-slate-400 border-b border-white/5">
+              <th class="px-6 py-3">프로젝트</th>
+              <th class="px-4 py-3">고객사</th>
+              <th class="px-4 py-3">국가</th>
+              <th class="px-4 py-3">통화</th>
+              <th class="px-4 py-3 text-right">수율</th>
+              <th class="px-4 py-3 text-right">예상이익률</th>
+              <th class="px-4 py-3 text-right">상태</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            <tr class="hover:bg-white/5">
+              <td class="px-6 py-3 font-mono text-indigo-300">EDN-2026-0031</td>
+              <td class="px-4 py-3">大阪스틸</td>
+              <td class="px-4 py-3">일본</td>
+              <td class="px-4 py-3 font-mono">JPY</td>
+              <td class="px-4 py-3 text-right text-teal-300">96.2%</td>
+              <td class="px-4 py-3 text-right text-teal-300">+14.2%</td>
+              <td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-orange-500/20 text-orange-300">생산중</span></td>
+            </tr>
+            <tr class="hover:bg-white/5">
+              <td class="px-6 py-3 font-mono text-indigo-300">EDN-2026-0029</td>
+              <td class="px-4 py-3">대성건설</td>
+              <td class="px-4 py-3">국내</td>
+              <td class="px-4 py-3 font-mono">KRW</td>
+              <td class="px-4 py-3 text-right text-teal-300">97.4%</td>
+              <td class="px-4 py-3 text-right text-teal-300">+11.8%</td>
+              <td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-blue-500/20 text-blue-300">수주확정</span></td>
+            </tr>
+            <tr class="hover:bg-white/5">
+              <td class="px-6 py-3 font-mono text-indigo-300">EDN-2026-0027</td>
+              <td class="px-4 py-3">Perth Steel</td>
+              <td class="px-4 py-3">호주</td>
+              <td class="px-4 py-3 font-mono">AUD</td>
+              <td class="px-4 py-3 text-right text-amber-300">93.1%</td>
+              <td class="px-4 py-3 text-right text-teal-300">+9.6%</td>
+              <td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-teal-500/20 text-teal-300">절단계획</span></td>
+            </tr>
+            <tr class="hover:bg-white/5">
+              <td class="px-6 py-3 font-mono text-indigo-300">EDN-2026-0024</td>
+              <td class="px-4 py-3">한빛중공업</td>
+              <td class="px-4 py-3">국내</td>
+              <td class="px-4 py-3 font-mono">KRW</td>
+              <td class="px-4 py-3 text-right text-teal-300">95.8%</td>
+              <td class="px-4 py-3 text-right text-slate-300">+7.2%</td>
+              <td class="px-4 py-3 text-right"><span class="rounded-full px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300">정산완료</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== ENGINE — 원가·손익 엔진 =========== -->
+  <section id="engine" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="text-xs font-mono text-cyan-400 mb-3">03 · ENGINE</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">프로젝트 원가·손익 평가 엔진</h2>
+      <p class="mt-3 text-lg text-slate-300">
+        예상 총원가·예상이익(BS1101/1102)부터 최종 손익(BS1106)·환리스크(BS1104)까지 · 결정론적 규칙, "왜 이 값인지" 근거 포함
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="rounded-2xl p-8 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <div class="text-xs text-slate-400">EDN-2026-0031 (일본 수출) · 손익 건전성</div>
+            <div class="flex items-baseline gap-3 mt-1">
+              <div class="text-5xl font-bold">84</div>
+              <div class="text-sm text-slate-500">/ 100</div>
+              <div class="rounded-full px-3 py-1 bg-teal-500/20 text-teal-400 text-sm font-semibold">A−</div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-400 text-right">engine v1.0<br><span class="font-mono text-indigo-400">explainable</span></div>
+        </div>
+        <div class="h-80"><canvas id="eden-radar"></canvas></div>
+      </div>
+
+      <div class="space-y-3">
+        <!-- subscore rows -->
+        <div class="rounded-2xl p-5 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-sm">수율</span>
+            <span class="font-mono text-teal-300 font-bold">96</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-teal-400" style="width:96%"></div></div>
+          <p class="text-xs text-slate-400">스크랩률 3.8%, 목표 대비 +1.2%p · 잔재 1%p ≈ ₩1,240,000 절감 감도</p>
+        </div>
+        <div class="rounded-2xl p-5 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-sm">원가 정합</span>
+            <span class="font-mono text-teal-300 font-bold">88</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-teal-400" style="width:88%"></div></div>
+          <p class="text-xs text-slate-400">예상(견적 BS1101) 대비 실제 원가 편차 4.1% · 간접비 배부키 표준화 완료</p>
+        </div>
+        <div class="rounded-2xl p-5 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-sm">마진</span>
+            <span class="font-mono text-amber-300 font-bold">72</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-amber-400" style="width:72%"></div></div>
+          <p class="text-xs text-slate-400">예상이익률 14.2% · 원자재비 비중 62% (커머디티 특성상 수율 민감)</p>
+        </div>
+        <div class="rounded-2xl p-5 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-sm">환리스크 대비</span>
+            <span class="font-mono text-teal-300 font-bold">79</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-cyan-400" style="width:79%"></div></div>
+          <p class="text-xs text-slate-400">JPY 미수 ¥8.4M, −2% 시 ₩1.5M 손실 노출 · 수금일 스냅샷(BS1104) 평가</p>
+        </div>
+        <div class="rounded-2xl p-5 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-sm">납기 준수</span>
+            <span class="font-mono text-teal-300 font-bold">91</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2"><div class="h-full bg-teal-400" style="width:91%"></div></div>
+          <p class="text-xs text-slate-400">계획 대비 +2일 이내 · 작업지시 상태기계로 실시간 추적</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl p-6 backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20">
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-xl bg-indigo-500/20"><i data-lucide="lightbulb" class="w-5 h-5 text-indigo-300"></i></div>
+        <div class="flex-1">
+          <div class="font-semibold mb-1">엔진 해설</div>
+          <p class="text-slate-300 text-sm leading-relaxed">원자재비 비중이 62%로 높은 커머디티 구조상, <span class="text-teal-300">CP 수율 1%p 개선이 마진에 직접 반영</span>됩니다. JPY 환리스크는 수금일 환율 스냅샷으로 평가하고, 원가 편차의 62%가 원자재비에서 발생하므로 제강사 비교(BS1108)의 최소비용안 채택이 손익 방어의 급소입니다.</p>
+          <p class="mt-3 text-xs text-amber-400 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+            본 수치는 데모 목업이며 실제 회계 판단의 유일한 근거가 될 수 없습니다.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== OPERATOR — 운영·관리자 =========== -->
+  <section id="operator" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="text-xs font-mono text-indigo-400 mb-3">04 · OPERATOR</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">운영·관리자 관점</h2>
+      <p class="mt-3 text-lg text-slate-300">부서×직급 RBAC · 감사 로그(append-only) · 수율 개선의 금액 효과를 직접 시뮬레이션</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="users" class="w-3.5 h-3.5"></i>활성 사용자</div>
+        <div class="text-3xl font-bold"><span data-countup="24">0</span></div>
+        <div class="text-xs text-teal-400 mt-1">9개 부서 · RBAC 매트릭스</div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="folder" class="w-3.5 h-3.5"></i>등록 프로젝트</div>
+        <div class="text-3xl font-bold"><span data-countup="186">0</span></div>
+        <div class="text-xs text-slate-500 mt-1">누적 수주·유통 건</div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="scissors" class="w-3.5 h-3.5"></i>처리 CP 잡</div>
+        <div class="text-3xl font-bold"><span data-countup="342">0</span></div>
+        <div class="text-xs text-slate-500 mt-1">Celery 비동기 최적화</div>
+      </div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center gap-2 text-slate-400 text-xs mb-2"><i data-lucide="activity" class="w-3.5 h-3.5"></i>API 에러율</div>
+        <div class="text-3xl font-bold text-teal-400"><span data-countup-decimal="0.1">0</span>%</div>
+        <div class="text-xs text-slate-500 mt-1">지난 24시간</div>
+      </div>
+    </div>
+
+    <!-- 수율 절감 시뮬레이터 -->
+    <div class="rounded-2xl p-8 backdrop-blur-3xl bg-gradient-to-br from-teal-500/10 to-transparent border border-teal-500/20">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="p-2.5 rounded-xl bg-teal-500/20"><i data-lucide="calculator" class="w-5 h-5 text-teal-300"></i></div>
+        <div>
+          <h3 class="font-semibold text-lg">수율 절감 시뮬레이터</h3>
+          <p class="text-sm text-slate-400">연간 원자재 투입과 수율 개선폭을 조정해 절감 효과를 추정합니다</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="text-sm text-slate-400 mb-2 block">연간 원자재 투입액 (억원)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="eden-mat" min="10" max="200" value="80" class="flex-1" />
+            <span id="eden-mat-display" class="font-mono text-sm w-16 text-right">80억</span>
+          </div>
+          <label class="text-sm text-slate-400 mb-2 mt-4 block">수율 개선폭 (%p)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="eden-yield" min="0.5" max="5" step="0.1" value="1.5" class="flex-1" />
+            <span id="eden-yield-display" class="font-mono text-sm w-16 text-right">1.5%p</span>
+          </div>
+        </div>
+        <div class="flex flex-col justify-center text-right">
+          <div class="text-sm text-slate-400">연간 원자재비 절감 (추정)</div>
+          <div class="text-5xl font-bold text-teal-300 my-2">₩<span id="eden-save">120,000,000</span></div>
+          <div class="text-sm text-slate-500">스크랩 감소분 = 투입액 × 수율 개선폭</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== INSIGHTS — 모호 + 누락 =========== -->
+  <section id="insights" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-amber-400 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+        05 · INSIGHTS
+        <span class="rounded-full px-2 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-semibold">보너스 자료</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">우리가 발견한 숨은 이슈들</h2>
+      <p class="mt-3 text-lg text-slate-300">공고 1장에서 도출한 모호점(M1–M11)·누락 요구 · 다른 지원자가 놓쳤을 가능성이 높은 결정 변수</p>
+    </div>
+
+    <div class="mb-10">
+      <h3 class="font-semibold mb-4 flex items-center gap-2"><i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>모호한 요구사항 Top 3</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="font-mono text-xs text-amber-400">M1 · CP 차원</span>
+            <span class="rounded-full px-2 py-0.5 text-[10px] bg-red-500/20 text-red-300">영향 최대</span>
+          </div>
+          <h4 class="font-semibold mb-3">폭 방향 배열(스트리핑) — 엑셀로 확정</h4>
+          <div class="space-y-2 text-xs">
+            <div class="rounded-lg p-2.5 bg-white/5 border border-white/10"><span class="text-teal-300 font-semibold">확정</span> · 두께·재질별 폭 방향 배열 + 길이 맞춤 발주 (배열수 J·행 병합)</div>
+            <div class="rounded-lg p-2.5 bg-white/5 border border-white/10"><span class="text-indigo-300 font-semibold">잔여 변수</span> · 표준 최소폭 강제 비율·잉여 관리·규칙 공식화</div>
+          </div>
+          <p class="mt-3 text-xs text-slate-400">역공학으로 초기 난도 리스크 <span class="text-teal-300 font-semibold">해소</span></p>
+        </div>
+        <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="font-mono text-xs text-amber-400">M2 · "최적" 정의</span>
+            <span class="rounded-full px-2 py-0.5 text-[10px] bg-amber-500/20 text-amber-300">검증 기준</span>
+          </div>
+          <h4 class="font-semibold mb-3">근사해 vs 수학적 최적</h4>
+          <div class="space-y-2 text-xs">
+            <div class="rounded-lg p-2.5 bg-white/5 border border-white/10"><span class="text-indigo-300 font-semibold">해석 A</span> · 휴리스틱 근사해(수 초)</div>
+            <div class="rounded-lg p-2.5 bg-white/5 border border-white/10"><span class="text-teal-300 font-semibold">해석 B</span> · MILP/CP-SAT 최적(장시간 허용)</div>
+          </div>
+          <p class="mt-3 text-xs text-slate-400">영향: 알고리즘 선택 · KPI(목표 수율·허용시간) 부재 시 스코프 무한</p>
+        </div>
+        <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="font-mono text-xs text-amber-400">M3 · 엑셀 양식</span>
+            <span class="rounded-full px-2 py-0.5 text-[10px] bg-amber-500/20 text-amber-300">착수 조건</span>
+          </div>
+          <h4 class="font-semibold mb-3">단순표 vs 매크로·다중시트</h4>
+          <div class="space-y-2 text-xs">
+            <div class="rounded-lg p-2.5 bg-white/5 border border-white/10"><span class="text-indigo-300 font-semibold">해석 A</span> · 단일 표(길이·수량)</div>
+            <div class="rounded-lg p-2.5 bg-white/5 border border-white/10"><span class="text-teal-300 font-semibold">해석 B</span> · 다중 시트·명명범위·VBA 수식 체인</div>
+          </div>
+          <p class="mt-3 text-xs text-slate-400">영향: 파서 공수·정합성 · 양식 미확보 시 설계 착수 불가</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="font-semibold mb-4 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>누락 가능 요구사항 (§8)</h3>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex flex-wrap gap-3">
+          <span class="group relative rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200 cursor-help">데이터 마이그레이션<span class="pointer-events-none absolute left-0 top-full mt-2 w-56 rounded-lg p-2 bg-slate-900 border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition z-10">수년치 엑셀 이관·정합성 검증 — 배경상 필수인데 과업에 없음</span></span>
+          <span class="group relative rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200 cursor-help">감사 로그·변경 이력<span class="pointer-events-none absolute left-0 top-full mt-2 w-56 rounded-lg p-2 bg-slate-900 border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition z-10">"데이터 누적" 취지상 필요 · audit_logs 테이블 예약</span></span>
+          <span class="group relative rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200 cursor-help">알림(수금·미수·클레임·납기)<span class="pointer-events-none absolute left-0 top-full mt-2 w-56 rounded-lg p-2 bg-slate-900 border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition z-10">운영상 자연 발생, 미명시 · 스케줄러/발송 인프라</span></span>
+          <span class="group relative rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200 cursor-help">파일 첨부·저장<span class="pointer-events-none absolute left-0 top-full mt-2 w-56 rounded-lg p-2 bg-slate-900 border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition z-10">사진대지·성적서 스캔·도면 — 품질에서 파일 대량 발생 · S3</span></span>
+          <span class="group relative rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200 cursor-help">검색·필터·페이지네이션<span class="pointer-events-none absolute left-0 top-full mt-2 w-56 rounded-lg p-2 bg-slate-900 border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition z-10">목록 공통 UX 표준 — 미명시(암묵)</span></span>
+          <span class="group relative rounded-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/20 text-red-200 cursor-help">엑셀 내보내기<span class="pointer-events-none absolute left-0 top-full mt-2 w-56 rounded-lg p-2 bg-slate-900 border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition z-10">현행 엑셀 사용자 이관 편의 — 미명시</span></span>
+        </div>
+        <p class="mt-4 text-xs text-slate-500">ℹ 이 항목들은 공고 원문에 명시되지 않았지만, 실제 구현 시 반드시 합의가 필요합니다. (마우스 오버 시 근거 표시)</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== QUESTIONS — 발주자 질의 =========== -->
+  <section id="questions" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-indigo-400 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+        06 · QUESTIONS
+        <span class="rounded-full px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold">보너스 자료</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">발주자님께 꼭 여쭙고 싶은 10가지</h2>
+      <p class="mt-3 text-lg text-slate-300">🔴 필수 질문 — 이 답이 견적·일정·아키텍처를 결정합니다 · 30분 미팅에서 함께 정리</p>
+    </div>
+
+    <div class="rounded-2xl backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden" id="questions-accordion">
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-teal-400 mr-1">Q1 ✅</span><span class="flex-1">CP 최적화 차원 — 폭 방향 배열(스트리핑)로 확정, 사내 슬리팅 범위만 확인</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">확정:</span> 제공해주신 실물 엑셀 역공학 결과, 두께·재질별로 부재를 폭 방향으로 배열해 광폭 플레이트를 발주하는 구조(배열수 J·행 병합). 길이는 부재길이+여유로 발주.</p><p class="mt-2"><span class="text-teal-300">남은 확인:</span> 표준 최소폭(1501) 강제 비율·잉여 판재 관리·에지트림/커프 규칙 공식화. 사내 광폭 후판 자체 슬리팅(2D)은 선택범위</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q2 🔴</span><span class="flex-1">"최적"의 정의·성능 목표 — 근사해(수 초)로 충분한가, 수학적 최적이 필요한가?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> (A) 근사해·수초 · (B) 최적해·시간무제한 · + 수용 KPI(목표 할증률/잉여율, 허용 계산시간)</p><p class="mt-2"><span class="text-amber-300">영향:</span> 알고리즘(그리디 폭배정·CP-SAT/MILP) 및 검증 기준 결정. KPI 부재 시 스코프 무한 (M2)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q3 🔴</span><span class="flex-1">BH CP 엑셀 양식 구조 — 단일 표인가, 다중 시트·매크로·수식 체인인가? 착수 즉시 제공 가능?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> (A) 단순표 · (B) 다중시트·매크로 · + 제공 가부·시점</p><p class="mt-2"><span class="text-amber-300">영향:</span> 파서 공수·정합성 직결. 양식이 곧 명세이므로 미확보 시 설계 착수 불가 (M3/A2)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q6 🔴</span><span class="flex-1">시험성적서 양식 수 × 국가(국내/일본/호주)의 총 종류 수와 각 필드 스키마 확보 가능?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> 국가별 종수 + 샘플 파일</p><p class="mt-2"><span class="text-amber-300">영향:</span> 양식별 개별 스펙(입력폼·검증·PDF 템플릿). 종수 = 2차 공수 승수 (M5/A6)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q7 🔴</span><span class="flex-1">"MCS" 정의 — Mill Certificate Sheet인가, Material Control System인가, 사내 약어인가?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> 정의 + 샘플</p><p class="mt-2"><span class="text-amber-300">영향:</span> 생산·품질 도메인 모델·ERD에 직접 영향. 미정의 시 <span class="font-mono text-xs">work_orders.mcs_data</span> 설계 불가 (M6)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q8 🔴</span><span class="flex-1">더존 ERP/전자세금계산서 연동 범위 — 확장성 DB 설계만인가, 실제 API 연동 개발 포함인가?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> (A) 설계만 · (B) 개발 포함 + 규격(더존 iCUBE/Bizbox, 프로토콜)</p><p class="mt-2"><span class="text-amber-300">영향:</span> B면 외부 시스템 연동 스코프·일정 추가. 기본 가정은 <span class="font-mono text-xs">external_ref JSONB</span> 예약(설계만) (M7/A3)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q9 🔴</span><span class="flex-1">데이터 마이그레이션 범위 — 신규 입력만인가, 과거 엑셀 이력 이관(연수·건수)인가?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> (A) 신규 only · (B) N년 이관 + 정합성 검증 책임</p><p class="mt-2"><span class="text-amber-300">영향:</span> ETL·정합성 검증 별도 공수. 대량이면 마이그레이션 트랙 신설 (M9/A4)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q18 🔴</span><span class="flex-1">배포·호스팅 주체 — 개발사 관리 클라우드인가, 발주사 온프레미스/자체 클라우드인가?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> (A) 개발사 클라우드 · (B) 발주사 온프레미스 (데이터 소유권 귀속 조건 연계)</p><p class="mt-2"><span class="text-amber-300">영향:</span> 인프라·CI/CD·운영 이관 범위 결정. Docker Compose로 양쪽 대응 설계 (M8/A5)</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q19 🔴</span><span class="flex-1">RBAC 권한 매트릭스 — 부서×직급×기능 권한표 제공 가능? 승인/결재 흐름 유무?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> 매트릭스 제공 가부</p><p class="mt-2"><span class="text-amber-300">영향:</span> 권한 모델이 초기 도메인 뼈대. 결재 플로우 있으면 상태머신 추가</p></div>
+      </details>
+      <details class="accordion-item"><summary><span class="font-mono text-xs text-red-400 mr-1">Q28 🔴</span><span class="flex-1">예산 6,000만원/5개월 대비 전 범위 일괄인가, 차수 분리·MVP 우선(CP→1차→2·3차)인가?</span></summary>
+        <div class="accordion-body"><p><span class="text-slate-400">선택지:</span> (A) 일괄 · (B) 차수 분리</p><p class="mt-2"><span class="text-amber-300">영향:</span> 범위 = 미니 ERP. 단계 계약이 예산·일정 리스크 공유에 필수 (권장: B). CP를 1차 선검증 마일스톤으로 분리 제안 (§10)</p></div>
+      </details>
+    </div>
+
+    <div class="mt-6 text-center">
+      <a href="#cta" class="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition border border-indigo-500/30">
+        이 질문들을 함께 답해봐요<i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </section>
+
+  <!-- =========== RISKS — 리스크 매트릭스 =========== -->
+  <section id="risks" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-red-400 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
+        07 · RISKS
+        <span class="rounded-full px-2 py-0.5 bg-red-500/20 text-red-300 text-[10px] font-semibold">보너스 자료</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">이미 식별한 19개 리스크</h2>
+      <p class="mt-3 text-lg text-slate-300">확률×영향 독립 평가 + 연쇄(cascade) 분석 · 각 리스크마다 대응 전략 준비 완료</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3 rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">확률 × 영향 매트릭스</h3>
+          <div class="flex items-center gap-3 text-xs text-slate-400">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span>치명(9)</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>중(6~4)</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-500"></span>낮음(2)</span>
+          </div>
+        </div>
+        <div class="relative h-80"><canvas id="eden-risks"></canvas></div>
+        <p class="mt-2 text-xs text-slate-500 text-center">각 점을 클릭하면 상세 대응 전략이 우측 패널에 표시됩니다</p>
+      </div>
+
+      <div class="lg:col-span-2 space-y-3">
+        <h3 class="font-semibold mb-3">Top 5 집중 대응</h3>
+        <div class="rounded-xl p-4 bg-red-500/10 border border-red-500/20">
+          <div class="flex items-center justify-between mb-1"><span class="font-mono text-xs text-red-300">R1 · 9점</span><span class="text-[10px] text-red-300">완화+회피</span></div>
+          <div class="font-semibold text-sm">CP 알고리즘 난도</div>
+          <p class="text-xs text-slate-400 mt-1">CP 선검증 PoC로 조기 소거 · 2D·수학적 최적은 선택범위 분리</p>
+        </div>
+        <div class="rounded-xl p-4 bg-red-500/10 border border-red-500/20">
+          <div class="flex items-center justify-between mb-1"><span class="font-mono text-xs text-red-300">R2 · 9점</span><span class="text-[10px] text-red-300">완화</span></div>
+          <div class="font-semibold text-sm">범위·예산·일정 부적정</div>
+          <p class="text-xs text-slate-400 mt-1">차수(1→2→3) 분리 계약 · 선택범위 명문 분리</p>
+        </div>
+        <div class="rounded-xl p-4 bg-red-500/10 border border-red-500/20">
+          <div class="flex items-center justify-between mb-1"><span class="font-mono text-xs text-red-300">R3 · 9점</span><span class="text-[10px] text-red-300">완화+회피</span></div>
+          <div class="font-semibold text-sm">엑셀 양식 확보 지연</div>
+          <p class="text-xs text-slate-400 mt-1">착수 전제조건으로 양식 워크숍(반나절) 계약화</p>
+        </div>
+        <div class="rounded-xl p-4 bg-amber-500/10 border border-amber-500/20">
+          <div class="flex items-center justify-between mb-1"><span class="font-mono text-xs text-amber-300">R7 · 6점</span><span class="text-[10px] text-amber-300">완화</span></div>
+          <div class="font-semibold text-sm">단독 수행 버스팩터</div>
+          <p class="text-xs text-slate-400 mt-1">차수 분리로 부하 평준화 · 문서·테스트 상시 산출</p>
+        </div>
+        <div class="rounded-xl p-4 bg-amber-500/10 border border-amber-500/20">
+          <div class="flex items-center justify-between mb-1"><span class="font-mono text-xs text-amber-300">R4 · 6점</span><span class="text-[10px] text-amber-300">회피</span></div>
+          <div class="font-semibold text-sm">인수·검수 기준 모호</div>
+          <p class="text-xs text-slate-400 mt-1">정량 검수 기준(수율 오차 ±N%·응답 ≤N초)을 계약 부속서로</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cascade note -->
+    <div class="mt-6 rounded-2xl p-6 backdrop-blur-3xl bg-gradient-to-br from-red-500/10 to-transparent border border-red-500/20 flex items-start gap-4">
+      <div class="p-2.5 rounded-xl bg-red-500/20 flex-shrink-0"><i data-lucide="git-branch" class="w-5 h-5 text-red-300"></i></div>
+      <div>
+        <div class="font-semibold mb-1">연쇄(Cascade) 분석 — 이 프로젝트의 핵심</div>
+        <p class="text-slate-300 text-sm leading-relaxed">리스크는 독립적이지 않습니다. CP가 축이라, <span class="font-mono text-xs bg-white/10 px-1.5 py-0.5 rounded">R3 양식 지연 → R1 CP PoC 지연 → 설계완료 붕괴 → 전 파이프라인 순연</span> 처럼 상류 하나가 하류 전체를 도미노로 넘어뜨립니다. 방어의 급소는 연쇄 발원점(R1·R3)이며, "CP 선검증 + 차수 분리"가 정확히 이 두 연쇄를 착수 전에 끊습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== ARCHITECTURE =========== -->
+  <section id="architecture" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-cyan-400 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+        08 · ARCHITECTURE
+        <span class="rounded-full px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-[10px] font-semibold">보너스 자료</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">이미 설계가 끝났습니다</h2>
+      <p class="mt-3 text-lg text-slate-300">EPM 요구분석 + RSM 도메인 설계(21 Object / 8 Value / Link) + ADR + 순수함수 코드 · 구현 전 의사결정 완료</p>
+    </div>
+
+    <div class="rounded-2xl backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <div class="flex border-b border-white/10 overflow-x-auto" role="tablist" id="arch-tabs">
+        <button class="arch-tab-trigger flex-1 min-w-[120px] px-6 py-4 font-semibold text-sm bg-white/5 border-b-2 border-cyan-400 text-cyan-400" data-tab="diagram" role="tab" aria-selected="true">다이어그램</button>
+        <button class="arch-tab-trigger flex-1 min-w-[120px] px-6 py-4 font-semibold text-sm text-slate-400 border-b-2 border-transparent hover:text-slate-200" data-tab="stack" role="tab" aria-selected="false">기술 스택</button>
+        <button class="arch-tab-trigger flex-1 min-w-[120px] px-6 py-4 font-semibold text-sm text-slate-400 border-b-2 border-transparent hover:text-slate-200" data-tab="adrs" role="tab" aria-selected="false">ADR 6건</button>
+        <button class="arch-tab-trigger flex-1 min-w-[120px] px-6 py-4 font-semibold text-sm text-slate-400 border-b-2 border-transparent hover:text-slate-200" data-tab="code" role="tab" aria-selected="false">CP 코드 미리보기</button>
+      </div>
+
+      <!-- Tab: Diagram -->
+      <div class="arch-tab-panel p-6 md:p-8" data-panel="diagram">
+        <div class="mb-4 text-sm text-slate-400">레이어·데이터 흐름 · CP 최적화는 Celery 워커로 분리 (PC 웹 전용)</div>
+
+        <div class="flex justify-center">
+          <div class="w-full max-w-md rounded-2xl px-5 py-4 bg-gradient-to-br from-indigo-500/20 to-teal-500/10 border border-indigo-500/30 flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/20">
+            <i data-lucide="monitor" class="w-5 h-5 text-indigo-300"></i>
+            <div class="text-center">
+              <div class="font-semibold">React 18 + TypeScript SPA</div>
+              <div class="text-xs text-slate-400 mt-0.5">AG Grid · Ant Design · ECharts · PC Web 전용</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center my-3">
+          <i data-lucide="arrow-down" class="w-4 h-4 text-slate-600"></i>
+          <div class="text-[10px] font-mono text-slate-500 mt-1">HTTPS · REST(JSON) + JWT</div>
+        </div>
+
+        <div class="rounded-2xl p-5 bg-cyan-500/5 border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
+          <div class="flex items-center justify-center gap-2 text-xs font-mono text-cyan-400 mb-4"><i data-lucide="server" class="w-3.5 h-3.5"></i>Nginx → Django 5 + DRF (API / 도메인 계층)</div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div class="rounded-lg px-3 py-2 bg-white/5 border border-white/10 text-center"><div class="text-xs font-semibold">공통·권한 RBAC</div><div class="text-[10px] text-slate-500 mt-0.5">부서×직급 매트릭스</div></div>
+            <div class="rounded-lg px-3 py-2 bg-white/5 border border-white/10 text-center"><div class="text-xs font-semibold">수주·CP (1차)★</div><div class="text-[10px] text-slate-500 mt-0.5">견적·네스팅·발주</div></div>
+            <div class="rounded-lg px-3 py-2 bg-white/5 border border-white/10 text-center"><div class="text-xs font-semibold">생산·품질 (2차)</div><div class="text-[10px] text-slate-500 mt-0.5">MCS·QMS·성적서</div></div>
+            <div class="rounded-lg px-3 py-2 bg-white/5 border border-white/10 text-center"><div class="text-xs font-semibold">유통 (2차)</div><div class="text-[10px] text-slate-500 mt-0.5">매입/매출·이익률</div></div>
+            <div class="rounded-lg px-3 py-2 bg-white/5 border border-white/10 text-center"><div class="text-xs font-semibold">자금·손익 (3차)</div><div class="text-[10px] text-slate-500 mt-0.5">기성·미수·손익</div></div>
+            <div class="rounded-lg px-3 py-2 bg-white/5 border border-white/10 text-center"><div class="text-xs font-semibold">대시보드 (3차)</div><div class="text-[10px] text-slate-500 mt-0.5">윈도우함수 집계</div></div>
+          </div>
+          <div class="mt-3 text-center text-[10px] font-mono text-slate-500">도메인 서비스(RSM behaviors/collaborations 매핑) · ORM</div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 my-3 text-center">
+          <i data-lucide="arrow-down" class="w-4 h-4 text-slate-600 mx-auto"></i>
+          <i data-lucide="arrow-down" class="w-4 h-4 text-slate-600 mx-auto"></i>
+          <i data-lucide="arrow-down" class="w-4 h-4 text-slate-600 mx-auto"></i>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="rounded-xl p-4 bg-teal-500/5 border border-teal-500/30">
+            <div class="flex items-center gap-2 mb-3"><i data-lucide="database" class="w-4 h-4 text-teal-400"></i><span class="font-semibold text-sm">PostgreSQL 16</span></div>
+            <ul class="space-y-1.5 text-xs text-slate-300">
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-teal-400"></span>NUMERIC 원가·손익 정밀도</li>
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-teal-400"></span>JSONB 가변 성적서 + GIN</li>
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-teal-400"></span>윈도우함수 · external_ref 확장</li>
+            </ul>
+          </div>
+          <div class="rounded-xl p-4 bg-indigo-500/5 border border-indigo-500/30">
+            <div class="flex items-center gap-2 mb-3"><i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i><span class="font-semibold text-sm">Celery Worker</span></div>
+            <ul class="space-y-1.5 text-xs text-slate-300">
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-indigo-400"></span>★ CP 네스팅 최적화(장시간)</li>
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-indigo-400"></span>예상원가/손익 · 엑셀 파싱</li>
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-indigo-400"></span>Redis 큐 · beat 환율 폴링</li>
+            </ul>
+          </div>
+          <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/30">
+            <div class="flex items-center gap-2 mb-3"><i data-lucide="cloud" class="w-4 h-4 text-amber-400"></i><span class="font-semibold text-sm">외부 / 스토리지</span></div>
+            <ul class="space-y-1.5 text-xs text-slate-300">
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-amber-400"></span>환율 API(수출입은행/상용)</li>
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-amber-400"></span>WeasyPrint PDF(문서 5종)</li>
+              <li class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-amber-400"></span>S3 호환(사진대지·스캔)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-xl p-3 bg-white/5 border border-dashed border-white/20 flex items-center justify-center gap-2 text-xs flex-wrap text-slate-400">
+          <i data-lucide="git-merge" class="w-3.5 h-3.5"></i>
+          <span>향후 확장 (설계만, M7)</span>
+          <i data-lucide="arrow-right" class="w-3 h-3"></i>
+          <span class="rounded-full px-2.5 py-0.5 bg-white/5 text-slate-300">더존 ERP</span>
+          <span class="rounded-full px-2.5 py-0.5 bg-white/5 text-slate-300">전자세금계산서</span>
+        </div>
+      </div>
+
+      <!-- Tab: Stack -->
+      <div class="arch-tab-panel hidden p-6" data-panel="stack">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-slate-400 border-b border-white/10">
+                <th class="py-3 px-2">계층</th><th class="py-3 px-2">선택</th><th class="py-3 px-2">근거</th><th class="py-3 px-2 text-right">대안 기각</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr><td class="py-3 px-2 text-slate-400">백엔드</td><td class="py-3 px-2 font-semibold">Python 3.12 + Django 5 + DRF</td><td class="py-3 px-2 text-slate-300">미니 ERP 폭의 CRUD·권한·리포트를 admin/auth/ORM/migration으로 가속. ERD가 ORM에서 파생</td><td class="py-3 px-2 text-right text-slate-500 text-xs">FastAPI(직접 구축 부담)</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">비동기</td><td class="py-3 px-2 font-semibold">Celery + Redis</td><td class="py-3 px-2 text-slate-300">CP 최적화(CPU 장시간)·환율 폴링을 웹 워커에서 분리. 잡 제출(202)→폴링→결과</td><td class="py-3 px-2 text-right text-slate-500 text-xs">두 번째 프레임워크</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">CP 최적화</td><td class="py-3 px-2 font-semibold">FFD/BFD + 로컬서치 / OR-Tools CP-SAT</td><td class="py-3 px-2 text-slate-300">기본 근사해, "최적" 요구 시 CP-SAT 승격. INestingOptimizer 프로토콜로 교체</td><td class="py-3 px-2 text-right text-slate-500 text-xs">순수 MILP(시간)</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">엑셀 파싱</td><td class="py-3 px-2 font-semibold">openpyxl + pandas</td><td class="py-3 px-2 text-slate-300">BH CP·성적서·원가 엑셀 양식(수식/명명범위/다중시트) 파싱</td><td class="py-3 px-2 text-right text-slate-500 text-xs">—</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">DB</td><td class="py-3 px-2 font-semibold">PostgreSQL 16</td><td class="py-3 px-2 text-slate-300">NUMERIC 정밀도·JSONB+GIN·윈도우함수·더존 확장 스키마</td><td class="py-3 px-2 text-right text-slate-500 text-xs">MySQL(4항 열위)</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">프론트</td><td class="py-3 px-2 font-semibold">React 18 + TS + Vite · AG Grid · ECharts</td><td class="py-3 px-2 text-slate-300">CP 절단배열·제강사 비교는 밀집 그리드 편집 중심. PC 웹 전용</td><td class="py-3 px-2 text-right text-slate-500 text-xs">모바일/반응형</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">PDF</td><td class="py-3 px-2 font-semibold">WeasyPrint</td><td class="py-3 px-2 text-slate-300">한글 폰트·표 레이아웃 안정. 문서 5종(견적·수주보고·발주·명세·청구)</td><td class="py-3 px-2 text-right text-slate-500 text-xs">브라우저 print</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">인증</td><td class="py-3 px-2 font-semibold">JWT(SimpleJWT) + 부서/직급 RBAC</td><td class="py-3 px-2 text-slate-300">자체 계정 기본. 부서×직급×기능 매트릭스, 민감 원가·손익 격리</td><td class="py-3 px-2 text-right text-slate-500 text-xs">SSO(선택)</td></tr>
+              <tr><td class="py-3 px-2 text-slate-400">배포</td><td class="py-3 px-2 font-semibold">Docker Compose</td><td class="py-3 px-2 text-slate-300">web/worker/beat/redis/db/nginx/minio. 개발사 클라우드 ↔ 발주사 온프레미스 양쪽</td><td class="py-3 px-2 text-right text-slate-500 text-xs">단일 서버</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: ADRs -->
+      <div class="arch-tab-panel hidden p-6" data-panel="adrs">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-xl p-5 bg-white/5 border border-white/10 hover:border-cyan-500/30 transition">
+            <div class="flex items-center justify-between mb-2"><span class="font-mono text-xs text-cyan-400">ADR-001</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-teal-500/20 text-teal-300">채택</span></div>
+            <h4 class="font-semibold mb-2">백엔드 = Django + DRF 단일 모놀리스</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">미니 ERP 폭(CRUD·마스터·권한·리포트)에서 admin/auth/ORM/migration 생산성 최상. 대안 <span class="text-slate-300">B. FastAPI</span>(직접 구축 손해), <span class="text-slate-300">C. Django+FastAPI 마이크로서비스</span>(배포/CI 이중 부담)는 5개월·소수 인력에 부적합해 기각.</p>
+          </div>
+          <div class="rounded-xl p-5 bg-white/5 border border-white/10 hover:border-cyan-500/30 transition">
+            <div class="flex items-center justify-between mb-2"><span class="font-mono text-xs text-cyan-400">ADR-002</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-teal-500/20 text-teal-300">채택</span></div>
+            <h4 class="font-semibold mb-2">CP = 그리디 폭배정 근사 기본, CP-SAT 승격 경로</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">기본 구현은 <span class="font-mono">optimize_cutting_plan</span> 그리디 폭배정 근사(<span class="font-mono">SolutionType.APPROXIMATE</span>). "최적" 요구(M2=B) 시 OR-Tools CP-SAT로 <span class="font-mono">INestingOptimizer</span> 구현 교체만으로 승격. 사내 판재 슬리팅(2D)은 선택범위 분리.</p>
+          </div>
+          <div class="rounded-xl p-5 bg-white/5 border border-white/10 hover:border-cyan-500/30 transition">
+            <div class="flex items-center justify-between mb-2"><span class="font-mono text-xs text-cyan-400">ADR-003</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-teal-500/20 text-teal-300">채택</span></div>
+            <h4 class="font-semibold mb-2">DB = PostgreSQL 16 (vs MySQL)</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">① 원가/손익 NUMERIC 정확도 ② 가변 성적서 JSONB+GIN ③ 대시보드 윈도우함수 ④ 더존 확장 스키마 유연성 — 4개 축에서 MySQL 대비 우위. 금액은 BIGINT(원 단위), 환율·이익률은 NUMERIC.</p>
+          </div>
+          <div class="rounded-xl p-5 bg-white/5 border border-white/10 hover:border-cyan-500/30 transition">
+            <div class="flex items-center justify-between mb-2"><span class="font-mono text-xs text-cyan-400">ADR-004</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-teal-500/20 text-teal-300">채택</span></div>
+            <h4 class="font-semibold mb-2">CP 최적화 = 비동기 잡 큐(Celery)</h4>
+            <p class="text-xs text-slate-400 leading-relaxed"><span class="font-mono">POST /optimize</span> → 202 job_id → <span class="font-mono">GET /jobs/{id}</span> 폴링. UI 블로킹 회피, <span class="font-mono">maxSeconds</span> 상한으로 "시간 내 최선해" 계약. 시간초과 시 근사 최선해 + 표기.</p>
+          </div>
+          <div class="rounded-xl p-5 bg-white/5 border border-white/10 hover:border-cyan-500/30 transition">
+            <div class="flex items-center justify-between mb-2"><span class="font-mono text-xs text-cyan-400">ADR-005</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-teal-500/20 text-teal-300">채택</span></div>
+            <h4 class="font-semibold mb-2">더존 연동 = 확장성 설계만</h4>
+            <p class="text-xs text-slate-400 leading-relaxed"><span class="font-mono">projects·partners.external_ref JSONB</span> 예약 + <span class="font-mono">BusinessDocument</span> 추상 타입으로 문서 계약 표준화. 실연동 개발은 별도 계약(M7). 향후 연동 지점을 막지 않는 설계.</p>
+          </div>
+          <div class="rounded-xl p-5 bg-white/5 border border-white/10 hover:border-cyan-500/30 transition">
+            <div class="flex items-center justify-between mb-2"><span class="font-mono text-xs text-cyan-400">ADR-006</span><span class="rounded-full px-2 py-0.5 text-[10px] bg-teal-500/20 text-teal-300">채택</span></div>
+            <h4 class="font-semibold mb-2">도메인 = 프레임워크 비의존 순수함수</h4>
+            <p class="text-xs text-slate-400 leading-relaxed"><span class="font-mono">behaviors.py</span>(optimize/원가/손익)는 순수함수, Service가 ORM↔값객체 변환 후 호출. 상태기계 <span class="font-mono">ProjectStateMachine</span>: 수주확정 전이는 <span class="font-mono">is_confirmed</span> 가드. 단위테스트로 불변식 감시.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Code -->
+      <div class="arch-tab-panel hidden p-6" data-panel="code">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2 text-sm"><i data-lucide="file-code-2" class="w-4 h-4 text-cyan-400"></i><span class="font-mono text-slate-300">domain/behaviors.py · optimize_cutting_plan</span></div>
+          <span class="text-xs text-slate-500">RSM Step 4 · 순수함수(FFD 폭배정)</span>
+        </div>
+        <pre class="rounded-xl !bg-slate-950/80 !p-4 text-xs overflow-x-auto"><code class="language-python">def optimize_cutting_plan(detail: CuttingPlanDetail) -&gt; CuttingResult:
+    """
+    두께·재질 그룹의 부재를 폭 방향으로 배열해 광폭 플레이트를 발주.
+    할증률(발주중량÷정미중량) 최소화. (폭배정 1D 빈패킹, FFD 휴리스틱)
+
+    후행조건: 모든 부재 배치 · markup_rate &gt;= 1.0
+    선행조건(방어적): 폭 밴드 목록 비어있지 않음 · 부재 폭 &gt; 0
+                     max(부재폭)+에지 ≤ 밴드 상한 (초과 시 배치불가 예외)
+    행위불변식: 각 plate에서 발주폭 == Σ(부재폭×배열수) + 에지트림 + 커프×절단선수 (폭 보존)
+    """
+    band_max = max(detail.width_bands)         # 발주 가능 최대 폭(예 3300)
+    if band_max &lt;= 0:
+        raise ValueError("주문 가능한 폭 밴드가 없습니다.")
+
+    strips: list[int] = []
+    for m in detail.members:                   # 전개된 부재(폭)
+        if m.width_mm &lt;= 0 or m.quantity &lt; 0:
+            raise ValueError("부재 폭/수량이 올바르지 않습니다.")
+        strips.extend([m.width_mm] * m.quantity)
+    if any(w + EDGE_TRIM &gt; band_max for w in strips):
+        raise ValueError("부재 폭이 밴드 상한을 초과합니다(배치불가).")
+
+    strips.sort(reverse=True)  # 내림차순(FFD)
+
+    plates: list[list[int]] = []
+    room: list[int] = []
+    for w in strips:
+        placed = False
+        for i in range(len(plates)):
+            need = w + KERF                     # 스트립 추가 시 커프 가산
+            if room[i] &gt;= need:                 # 폭 여유 충분한 첫 플레이트에 배열
+                plates[i].append(w); room[i] -= need; placed = True; break
+        if not placed:                          # 없으면 새 플레이트 개시(최소폭 1501 보장)
+            plates.append([w]); room.append(band_max - w - EDGE_TRIM)
+
+    # ... layouts 생성 · markup = 발주중량합 / 정미중량합
+    for l in layouts:                           # 행위불변식 감시: 폭 보존
+        assert l.order_width_mm == sum(l.strip_widths) + EDGE_TRIM + KERF * (len(l.strip_widths) - 1)
+    return CuttingResult(layouts=layouts, markup_rate=markup,
+                         ordered_weight_kg=ordered_kg,
+                         solution_type=SolutionType.APPROXIMATE)  # FFD = 근사해
+</code></pre>
+        <p class="mt-3 text-xs text-slate-500">전체 <span class="font-mono">domain/behaviors.py</span> — expand_flange_web(702)·calculate_estimated_cost(701)·calculate_final_profit(BS1106)·evaluate_receivable_with_fx(BS1104)·ProjectStateMachine 포함. RSM 산출물로 이미 코드화되어 구현 스캐폴딩 준비 완료.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== TIMELINE =========== -->
+  <section id="timeline" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-teal-400 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+        09 · TIMELINE
+        <span class="rounded-full px-2 py-0.5 bg-teal-500/20 text-teal-300 text-[10px] font-semibold">보너스 자료</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">주차별 실행 계획 (150일 ≈ 21주)</h2>
+      <p class="mt-3 text-lg text-slate-300">CP를 Phase 1로 전진 배치 · 차수(1→2→3) 단계 검수 · 마일스톤 1.5/3.5/4.5개월</p>
+    </div>
+
+    <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <div class="overflow-x-auto">
+        <div class="min-w-[860px]">
+          <!-- Week headers -->
+          <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 mb-3 text-[10px] text-slate-500 text-center">
+            <div></div>
+            <div>W1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div><div>13</div><div>14</div><div>15</div><div>16</div><div>17</div><div>18</div><div>19</div><div>20</div>
+          </div>
+
+          <!-- Gantt rows -->
+          <div class="space-y-2">
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">착수·양식 워크숍</div>
+              <div class="gantt-bar gantt-bar-p1" style="grid-column: 2 / 3" title="W1 · 엑셀 양식 워크숍(CP·원가·품질) · 스코프 확정"></div>
+            </div>
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">공통 기반·RBAC·환율</div>
+              <div class="gantt-bar gantt-bar-p1" style="grid-column: 3 / 5" title="W2~3 · 계정·RBAC·거래처 마스터·ERD·환율 스냅샷·PDF 골격"></div>
+            </div>
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">CP 파서·전개·PoC ★</div>
+              <div class="gantt-bar gantt-bar-p1" style="grid-column: 5 / 8" title="W4~6 · 엑셀 파서·W/FU/FL 전개·폭배정 최적화·대표 PJT 할증률 재현"></div>
+            </div>
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">1차 수주·발주</div>
+              <div class="gantt-bar gantt-bar-p2" style="grid-column: 8 / 13" title="W7~11 · 견적·예상원가·CP 비동기 잡·제강사 비교·수주확정→발주서·문서 PDF"></div>
+            </div>
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">2차 생산·품질·유통</div>
+              <div class="gantt-bar gantt-bar-p3" style="grid-column: 13 / 17" title="W12~15 · 작업지시·MCS·시험성적서·불량/클레임·출하·유통 이익률"></div>
+            </div>
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">3차 자금·손익·대시보드</div>
+              <div class="gantt-bar gantt-bar-p4" style="grid-column: 17 / 20" title="W16~18 · 기성·수금·미수금(환율)·최종 손익·대표이사 대시보드"></div>
+            </div>
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-300 pr-2">통합테스트·오픈</div>
+              <div class="gantt-bar gantt-bar-p4" style="grid-column: 20 / 22" title="W19~20 · 통합테스트·데이터 적재·인수인계·오픈"></div>
+            </div>
+          </div>
+
+          <!-- Milestones -->
+          <div class="mt-6 pt-4 border-t border-white/10">
+            <div class="grid grid-cols-[180px_repeat(20,minmax(0,1fr))] gap-1 items-center">
+              <div class="text-xs text-slate-400 font-semibold">마일스톤</div>
+              <div style="grid-column: 7 / 8" class="flex justify-center"><div class="milestone-marker" title="M1 설계완료(1.5개월) · CP PoC 수율 재현">1</div></div>
+              <div style="grid-column: 12 / 13" class="flex justify-center"><div class="milestone-marker" title="1차 검수 · 프로젝트~CP~발주서 E2E">2</div></div>
+              <div style="grid-column: 16 / 17" class="flex justify-center"><div class="milestone-marker" title="개발완료(3.5개월) · 2차 검수">3</div></div>
+              <div style="grid-column: 19 / 20" class="flex justify-center"><div class="milestone-marker" title="3차 검수 · 자금·손익·대시보드">4</div></div>
+              <div style="grid-column: 21 / 22" class="flex justify-center"><div class="milestone-marker" title="통합테스트·오픈(4.5개월)">5</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-4 text-xs">
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500/60"></span>Phase 1 — 공통 기반 + CP PoC</span>
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-pink-500/60"></span>Phase 2 — 1차 수주·발주</span>
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500/60"></span>Phase 3 — 2차 생산·품질·유통</span>
+        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-cyan-500/60"></span>Phase 4 — 3차 자금·손익 + 통합</span>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl p-6 backdrop-blur-3xl bg-gradient-to-br from-teal-500/10 to-transparent border border-teal-500/20 flex items-start gap-4">
+      <div class="p-2.5 rounded-xl bg-teal-500/20 flex-shrink-0"><i data-lucide="shield-check" class="w-5 h-5 text-teal-300"></i></div>
+      <div>
+        <div class="font-semibold mb-1">CP 선검증 게이트 + 차수 분리 계약</div>
+        <p class="text-slate-300 text-sm leading-relaxed">최난도 기능 CP를 W5~W6 <span class="text-teal-300 font-semibold">독립 선검증 PoC</span>로 떼어내, 대표 프로젝트 엑셀 수율을 오차 내 재현하는 것을 게이트로 삼습니다. 미통과 시 후속 착수를 보류해 나쁜 진행을 차단하고, 차수(1→2→3) 단계 검수·마일스톤 대금으로 6,000만원/5개월의 예산·일정 리스크를 발주사와 <span class="text-teal-300 font-semibold">공유</span>합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== WHY-US =========== -->
+  <section id="why-us" class="max-w-7xl mx-auto px-6 py-20 md:py-28">
+    <div class="mb-10 text-center">
+      <div class="text-xs font-mono text-indigo-400 mb-3">10 · WHY US</div>
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">왜 저희와 함께해야 할까요</h2>
+      <p class="mt-3 text-lg text-slate-300 max-w-2xl mx-auto">지원자 중에서 저희가 추가로 드릴 수 있는 것 — 말이 아니라 산출물로</p>
+    </div>
+
+    <div class="rounded-2xl backdrop-blur-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <div class="grid grid-cols-[1fr_auto_auto] gap-0 text-sm">
+        <div class="px-6 py-4 border-b border-white/10 font-semibold text-slate-400">차별화 포인트</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/10 font-semibold text-indigo-400 text-center w-24 md:w-32 bg-indigo-500/10">우리</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/10 font-semibold text-slate-500 text-center w-24 md:w-32">일반 지원자</div>
+
+        <div class="px-6 py-4 border-b border-white/5">깊은 요구분석 (모호 M1–M11 도출·EPM 산출물)</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center bg-indigo-500/5"><i data-lucide="check" class="w-5 h-5 text-teal-400 inline"></i></div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center text-slate-500 text-xs">일반 재해석</div>
+
+        <div class="px-6 py-4 border-b border-white/5">RSM 도메인 코드화 (21 Object → ERD·API·상태기계)</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center bg-indigo-500/5"><i data-lucide="check" class="w-5 h-5 text-teal-400 inline"></i></div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center"><i data-lucide="x" class="w-5 h-5 text-slate-600 inline"></i></div>
+
+        <div class="px-6 py-4 border-b border-white/5">CP 선검증 PoC (1주 내 폭배정 할증률 재현)</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center bg-indigo-500/5"><i data-lucide="check" class="w-5 h-5 text-teal-400 inline"></i></div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center text-slate-500 text-xs">"경험 있다" 주장</div>
+
+        <div class="px-6 py-4 border-b border-white/5">차수 분리 계약 (예산·일정 리스크 공유)</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center bg-indigo-500/5"><i data-lucide="check" class="w-5 h-5 text-teal-400 inline"></i></div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center text-slate-500 text-xs">일괄 고정가</div>
+
+        <div class="px-6 py-4 border-b border-white/5">리스크 19개 + 연쇄(cascade) 분석</div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center bg-indigo-500/5"><i data-lucide="check" class="w-5 h-5 text-teal-400 inline"></i></div>
+        <div class="px-4 md:px-6 py-4 border-b border-white/5 text-center"><i data-lucide="x" class="w-5 h-5 text-slate-600 inline"></i></div>
+
+        <div class="px-6 py-4">AI 래피드 프로토타이핑 (1주 내 동작 화면)</div>
+        <div class="px-4 md:px-6 py-4 text-center bg-indigo-500/5"><i data-lucide="check" class="w-5 h-5 text-teal-400 inline"></i></div>
+        <div class="px-4 md:px-6 py-4 text-center text-slate-500 text-xs">문서만</div>
+      </div>
+    </div>
+
+    <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-indigo-400">22<span class="text-lg">년</span></div><div class="text-xs text-slate-400 mt-1">백엔드 경력</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-teal-400">32+</div><div class="text-xs text-slate-400 mt-1">수행 프로젝트</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-cyan-400">21</div><div class="text-xs text-slate-400 mt-1">RSM 도메인 Object</div></div>
+      <div class="rounded-2xl p-6 backdrop-blur-3xl bg-white/5 border border-white/10 text-center"><div class="text-3xl font-bold text-indigo-300">6</div><div class="text-xs text-slate-400 mt-1">ADR 문서화</div></div>
+    </div>
+
+    <div class="mt-6 rounded-2xl p-6 backdrop-blur-3xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-4">
+      <div class="p-2.5 rounded-xl bg-amber-500/20 flex-shrink-0"><i data-lucide="message-square-warning" class="w-5 h-5 text-amber-300"></i></div>
+      <div>
+        <div class="font-semibold mb-1">정직한 갭 고지</div>
+        <p class="text-slate-300 text-sm leading-relaxed">철강/CP/네스팅/생산계획 <span class="text-amber-300">도메인 경험은 없습니다.</span> 그래서 역량을 말이 아닌 <span class="text-teal-300 font-semibold">1주 내 동작하는 CP PoC</span>로 증명하고, 22년의 백엔드·DDD·알고리즘 구현 역량과 최신 AI 도구로 이 갭을 계약 초기에 메웁니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== CTA =========== -->
+  <section id="cta" class="max-w-5xl mx-auto px-6 py-24 md:py-28">
+    <div class="rounded-3xl p-10 md:p-16 backdrop-blur-3xl bg-gradient-to-br from-indigo-500/20 via-teal-500/10 to-cyan-500/10 border border-indigo-500/30 relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl -mr-32 -mt-32"></div>
+      <div class="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl -ml-32 -mb-32"></div>
+
+      <div class="relative text-center">
+        <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs bg-white/10 border border-white/20 text-slate-200 mb-6">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300"></i>30분이면 충분합니다
+        </div>
+        <h2 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
+          미팅에서 <span class="bg-gradient-to-r from-indigo-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">CP 접근법과 차수 분리 구조</span>를 함께 보여드립니다
+        </h2>
+        <p class="text-lg text-slate-300 mb-10 max-w-2xl mx-auto">
+          FFD→CP-SAT 승격 경로, 정량 검수 기준, 그리고 동작하는 프로토타입을 직접 시연하고<br/>
+          발주자님의 10가지 질문에도 즉석에서 답변드립니다.
+        </p>
+
+        <!-- ROI Calculator (CP 시간 절감) -->
+        <div class="rounded-2xl p-8 bg-slate-950/40 border border-white/10 mb-8 max-w-2xl mx-auto text-left">
+          <div class="flex items-center gap-2 text-sm font-semibold mb-4">
+            <i data-lucide="calculator" class="w-4 h-4 text-teal-400"></i>이 시스템 도입 시 얼마나 절감될까요?
+          </div>
+          <label class="text-xs text-slate-400 mb-2 block">월 절단계획(CP) 수립 횟수</label>
+          <div class="flex items-center gap-4">
+            <input type="range" id="roi-trades" min="1" max="50" value="12" class="flex-1" />
+            <span id="roi-trades-display" class="font-mono text-sm w-12 text-right">12회</span>
+          </div>
+          <div class="mt-6 grid grid-cols-2 gap-4">
+            <div class="rounded-xl p-4 bg-teal-500/10 border border-teal-500/20">
+              <div class="text-xs text-slate-400 mb-1">연간 계획수립 시간 절감</div>
+              <div class="text-2xl font-bold text-teal-400"><span id="roi-hours">48</span><span class="text-sm">시간</span></div>
+            </div>
+            <div class="rounded-xl p-4 bg-indigo-500/10 border border-indigo-500/20">
+              <div class="text-xs text-slate-400 mb-1">인건비 절감 환산</div>
+              <div class="text-2xl font-bold text-indigo-400">₩<span id="roi-cost">2,400,000</span></div>
+            </div>
+          </div>
+          <p class="mt-3 text-[11px] text-slate-500">※ 수기 CP 대비 건당 약 20분 절감 가정. 스크랩 절감(원자재비)은 <span class="text-slate-400">운영 시뮬레이터</span> 참조.</p>
+        </div>
+
+        <p class="mt-6 text-sm text-slate-400">궁금하신 점은 위시켓 메시지로 직접 문의해주세요. 응답 평균 12시간 이내.</p>
+        <p class="mt-8 text-xs text-slate-500">
+          원문 공고: <a href="https://www.wishket.com/project/156936/" target="_blank" rel="noopener" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">위시켓 #156936</a>
+          · <a href="../nonit.html" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">일반 고객용 버전 보기</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========== CMD+K MODAL =========== -->
+  <div id="cmdk-backdrop" class="fixed inset-0 z-20 bg-slate-950/70 backdrop-blur-sm hidden" aria-hidden="true"></div>
+  <div id="cmdk-modal" class="fixed inset-0 z-20 hidden items-start justify-center pt-24 px-4" role="dialog" aria-modal="true">
+    <div class="w-full max-w-xl rounded-2xl backdrop-blur-3xl bg-slate-900/95 border border-white/20 shadow-2xl shadow-indigo-500/20 overflow-hidden">
+      <div class="flex items-center gap-3 p-4 border-b border-white/10">
+        <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
+        <input type="text" id="cmdk-input" placeholder="섹션 이동 또는 검색…" class="bg-transparent flex-1 outline-none text-sm" />
+        <kbd class="font-mono text-xs px-2 py-1 rounded bg-white/10 text-slate-400">ESC</kbd>
+      </div>
+      <ul class="max-h-80 overflow-y-auto p-2" id="cmdk-list">
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#core"><i data-lucide="scissors" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">CORE — BH Cutting Plan</span><span class="text-xs text-slate-500">01</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#portfolio"><i data-lucide="bar-chart-3" class="w-4 h-4 text-teal-400"></i><span class="flex-1 text-sm">DASHBOARD — 경영 대시보드</span><span class="text-xs text-slate-500">02</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#engine"><i data-lucide="target" class="w-4 h-4 text-cyan-400"></i><span class="flex-1 text-sm">ENGINE — 원가·손익 엔진</span><span class="text-xs text-slate-500">03</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#operator"><i data-lucide="users" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">OPERATOR — 운영·관리자</span><span class="text-xs text-slate-500">04</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#insights"><i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i><span class="flex-1 text-sm">INSIGHTS — 숨은 이슈</span><span class="text-xs text-slate-500">05</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#questions"><i data-lucide="message-circle-question" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">QUESTIONS — 발주자 질의</span><span class="text-xs text-slate-500">06</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#risks"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i><span class="flex-1 text-sm">RISKS — 리스크 매트릭스</span><span class="text-xs text-slate-500">07</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#architecture"><i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i><span class="flex-1 text-sm">ARCHITECTURE — ADR·코드</span><span class="text-xs text-slate-500">08</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#timeline"><i data-lucide="calendar" class="w-4 h-4 text-teal-400"></i><span class="flex-1 text-sm">TIMELINE — 주차별 계획</span><span class="text-xs text-slate-500">09</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#why-us"><i data-lucide="award" class="w-4 h-4 text-indigo-400"></i><span class="flex-1 text-sm">WHY-US — 경쟁 비교</span><span class="text-xs text-slate-500">10</span></li>
+        <li class="cmdk-item flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-white/5" data-target="#cta"><i data-lucide="calendar-check" class="w-4 h-4 text-teal-400"></i><span class="flex-1 text-sm">CTA — 미팅 문의</span><span class="text-xs text-slate-500">11</span></li>
+      </ul>
+      <div class="flex items-center justify-between px-4 py-2 border-t border-white/10 text-xs text-slate-500"><span>↑↓ 이동</span><span>↵ 선택</span><span>ESC 닫기</span></div>
+    </div>
+  </div>
+
+  <!-- =========== SIDE PANEL =========== -->
+  <aside id="side-panel" class="fixed right-0 top-0 h-screen w-96 max-w-[90vw] translate-x-full transition-transform duration-300 z-30 backdrop-blur-3xl bg-slate-900/95 border-l border-white/10 shadow-2xl shadow-indigo-500/20 overflow-y-auto">
+    <div class="flex items-center justify-between p-4 border-b border-white/10">
+      <div class="flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i><span class="font-semibold text-sm" id="side-panel-title">리스크 상세</span></div>
+      <button id="side-panel-close" class="p-1.5 rounded-lg hover:bg-white/10" aria-label="닫기"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div id="side-panel-body" class="p-6"></div>
+  </aside>
+
+  <!-- =========== FOOTER =========== -->
+  <footer class="border-t border-white/10 mt-20 py-10 text-center text-sm text-slate-500">
+    <div class="max-w-7xl mx-auto px-6">
+      <p>이 페이지는 위시켓 프로젝트 <span class="font-mono text-indigo-400">#156936</span> (EDEN OS · 이든철강 통합 운영 시스템) 지원용 레퍼런스 UI입니다. 실제 서비스가 아니며 데이터는 데모 목업입니다.</p>
+      <p class="mt-2">Generated by <span class="font-mono">wishket-refui</span> · IT 담당자용 · Last updated: 2026-07-18 · <a href="../nonit.html" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">일반 고객용 버전</a></p>
+    </div>
+  </footer>
+
+  <script src="./client.js"></script>
+  <script>
+    // =========================================================
+    // EDEN OS — 도메인 차트 (client.js와 canvas ID 분리 → 중복 렌더 없음)
+    // =========================================================
+    (function () {
+      if (typeof Chart === 'undefined') return;
+      Chart.defaults.color = 'rgba(241,245,249,0.7)';
+      Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+      Chart.defaults.font.family = 'Pretendard Variable, system-ui, sans-serif';
+
+      const commonOpts = (extra = {}) => ({
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: 'rgba(2,6,23,0.95)', borderColor: 'rgba(99,102,241,0.3)', borderWidth: 1, padding: 12 },
+        }, ...extra,
+      });
+
+      // 월별 수주·손익 추이
+      const trendEl = document.getElementById('eden-trend');
+      if (trendEl) new Chart(trendEl, {
+        type: 'line',
+        data: {
+          labels: ['2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07'],
+          datasets: [{
+            label: '수주액', data: [820000000, 910000000, 1005000000, 1080000000, 1190000000, 1284500000],
+            borderColor: '#6366f1',
+            backgroundColor: (ctx) => { const g = ctx.chart.ctx.createLinearGradient(0,0,0,260); g.addColorStop(0,'rgba(99,102,241,0.3)'); g.addColorStop(1,'rgba(99,102,241,0)'); return g; },
+            borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 5,
+          }],
+        },
+        options: commonOpts({
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: (v) => '₩' + (v/1e8).toFixed(1) + '억' } },
+          },
+        }),
+      });
+
+      // 통화별 수주 비중
+      const curEl = document.getElementById('eden-currency');
+      if (curEl) new Chart(curEl, {
+        type: 'doughnut',
+        data: {
+          labels: ['KRW 국내', 'JPY 일본', 'USD 기타', 'AUD 호주'],
+          datasets: [{ data: [62, 18, 8, 12], backgroundColor: ['#6366f1', '#14b8a6', '#38bdf8', '#f59e0b'], borderWidth: 0, hoverOffset: 8 }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, pointStyle: 'circle' } } } },
+      });
+
+      // 원가·손익 레이더 (철강 도메인 축)
+      const radarEl = document.getElementById('eden-radar');
+      if (radarEl) new Chart(radarEl, {
+        type: 'radar',
+        data: {
+          labels: ['수율', '원가 정합', '마진', '환리스크 대비', '납기 준수'],
+          datasets: [{ label: '점수', data: [96, 88, 72, 79, 91], backgroundColor: 'rgba(99,102,241,0.2)', borderColor: '#6366f1', borderWidth: 2, pointBackgroundColor: '#14b8a6', pointBorderColor: '#fff', pointRadius: 5, pointHoverRadius: 7 }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: 'rgba(255,255,255,0.1)' }, grid: { color: 'rgba(255,255,255,0.08)' }, pointLabels: { font: { size: 12 }, color: '#cbd5e1' }, ticks: { backdropColor: 'transparent', color: '#64748b', stepSize: 20 }, suggestedMin: 0, suggestedMax: 100 } } },
+      });
+
+      // sparkline
+      const sparkEl = document.getElementById('eden-spark');
+      if (sparkEl) { const arr = []; let v = 40; for (let i=0;i<24;i++){ v += (Math.random()-0.35)*7; arr.push(v);} new Chart(sparkEl, { type:'line', data:{ labels:Array.from({length:24},(_,i)=>i), datasets:[{ data:arr, borderColor:'#14b8a6', borderWidth:1.5, fill:false, tension:0.4, pointRadius:0 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{enabled:false} }, scales:{ x:{display:false}, y:{display:false} } } }); }
+
+      // 리스크 매트릭스 (클릭 → 사이드 패널)
+      const EDEN_RISKS = [
+        { id:'R1', name:'CP 알고리즘 난도', cat:'기술/범위', x:3.0, y:3.0, score:9, strategy:'완화+회피 — CP 선검증 PoC로 조기 소거, 2D·수학적 최적은 선택범위 분리, 착수 워크숍에서 M1·M2 최우선 확정' },
+        { id:'R2', name:'범위·예산·일정 부적정', cat:'범위/일정', x:2.8, y:3.0, score:9, strategy:'완화 — 차수(1→2→3) 분리 계약, 선택범위 명문 분리, MVP 우선순위표를 계약 부속서로' },
+        { id:'R3', name:'엑셀 양식 확보 지연', cat:'양식/데이터', x:3.0, y:2.82, score:9, strategy:'완화+회피 — 착수 전제조건으로 양식 워크숍(반나절) 계약화, 미확보 시 대표 양식 1종 PoC 선행' },
+        { id:'R4', name:'인수·검수 기준 모호', cat:'계약/커뮤', x:3.0, y:2.05, score:6, strategy:'회피 — 정량 검수 기준(CP 수율 오차 ±N%·응답 ≤N초·손익 정합 100%)을 계약 부속서로 사전 합의' },
+        { id:'R5', name:'더존 연동 범위 모호', cat:'범위', x:2.78, y:2.0, score:6, strategy:'회피+전가 — "이번 범위=확장 스키마 설계까지, 실연동은 별도 계약" 명문화' },
+        { id:'R6', name:'QMS 성적서 양식 수 가변', cat:'범위/기술', x:2.6, y:2.15, score:6, strategy:'완화 — 워크숍에서 양식 실물 전량 수집 + 종수 상한 합의(초과분 선택범위), 공통필드+JSONB' },
+        { id:'R7', name:'단독 수행 버스팩터', cat:'운영/계약', x:3.12, y:1.95, score:6, strategy:'완화 — 차수 분리로 부하 평준화, behaviors.py 단위테스트·ERD·API 명세를 진행 중 상시 산출' },
+        { id:'R8', name:'스택 친숙도 갭', cat:'기술', x:2.0, y:3.05, score:6, strategy:'완화 — FastAPI 대안 또는 착수 전 Django 집중 학습 1주. 자기유발 리스크, 결정만 하면 소멸' },
+        { id:'R9', name:'데이터 이관 범위', cat:'양식/데이터', x:2.0, y:2.0, score:4, strategy:'전가+회피 — 기본 "신규 입력+마스터 초기 적재", 과거 대량 이관은 별도 트랙/별도 견적' },
+        { id:'R10', name:'원가 배부 규칙 미표준', cat:'기술/범위', x:1.82, y:2.12, score:4, strategy:'완화 — 원가분석표 엑셀을 명세로 항목·배부키를 워크숍에서 수식 단위 확정(Q10)' },
+        { id:'R12', name:'호스팅 주체 미정', cat:'운영/기술', x:2.15, y:1.85, score:4, strategy:'완화 — Docker Compose로 양쪽 대응, Q18로 조기 확정' },
+        { id:'R13', name:'"MCS" 용어 미정의', cat:'기술', x:1.72, y:1.88, score:4, strategy:'완화 — Q7로 즉시 확정 + 샘플 확보. 영향 국소, 조기 질의로 해소' },
+      ];
+      const riskEl = document.getElementById('eden-risks');
+      if (riskEl) {
+        const groups = { danger:{label:'치명(9)',data:[],backgroundColor:'rgba(239,68,68,0.85)',borderColor:'#ef4444'}, warn:{label:'중(6~4)',data:[],backgroundColor:'rgba(245,158,11,0.85)',borderColor:'#f59e0b'}, info:{label:'낮음(2)',data:[],backgroundColor:'rgba(100,116,139,0.85)',borderColor:'#64748b'} };
+        EDEN_RISKS.forEach((r) => { const g = r.score >= 7 ? 'danger' : (r.score >= 4 ? 'warn' : 'info'); groups[g].data.push({ x:r.x, y:r.y, ...r }); });
+        new Chart(riskEl, {
+          type: 'scatter',
+          data: { datasets: Object.values(groups).map((ds) => ({ ...ds, pointRadius: 11, pointHoverRadius: 15, borderWidth: 2 })) },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            onClick: (e, els) => {
+              if (!els.length || !window.openSidePanel) return;
+              const el = els[0]; const pt = e.chart.data.datasets[el.datasetIndex].data[el.index];
+              window.openSidePanel(`${pt.id} · ${pt.name}`, `
+                <div class="space-y-3">
+                  <div class="flex items-center gap-2"><span class="rounded-full px-2 py-0.5 text-xs bg-white/10 border border-white/10">${pt.cat}</span><span class="rounded-full px-2 py-0.5 text-xs ${pt.score>=7?'bg-red-500/20 text-red-300':(pt.score>=4?'bg-amber-500/20 text-amber-300':'bg-slate-500/20 text-slate-300')}">${pt.score}점</span></div>
+                  <div class="rounded-lg p-3 bg-white/5 border border-white/10"><div class="text-xs text-slate-400 mb-1">확률 × 영향</div><div class="text-lg font-bold">${['','하','중','상'][Math.round(pt.y)]} × ${['','하','중','상'][Math.round(pt.x)]}</div></div>
+                  <div><div class="text-xs text-slate-400 mb-1">대응 전략</div><p class="text-sm text-slate-200 leading-relaxed">${pt.strategy}</p></div>
+                </div>`);
+            },
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.id}: ${ctx.raw.name} (${ctx.raw.score})` } } },
+            scales: {
+              x: { title: { display: true, text: '영향 →' }, min: 0.5, max: 3.5, ticks: { stepSize: 1, callback: (v) => ['','하','중','상'][v] || '' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+              y: { title: { display: true, text: '확률 →' }, min: 0.5, max: 3.5, ticks: { stepSize: 1, callback: (v) => ['','하','중','상'][v] || '' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            },
+          },
+        });
+      }
+
+      // 수율 절감 시뮬레이터
+      const mat = document.getElementById('eden-mat');
+      const yieldEl = document.getElementById('eden-yield');
+      const matDisp = document.getElementById('eden-mat-display');
+      const yieldDisp = document.getElementById('eden-yield-display');
+      const saveEl = document.getElementById('eden-save');
+      if (mat && yieldEl && saveEl) {
+        const upd = () => {
+          const m = +mat.value; const y = +yieldEl.value;
+          if (matDisp) matDisp.textContent = m + '억';
+          if (yieldDisp) yieldDisp.textContent = y.toFixed(1) + '%p';
+          const saving = Math.round(m * 100000000 * (y / 100));
+          saveEl.textContent = saving.toLocaleString('ko-KR');
+        };
+        mat.addEventListener('input', upd); yieldEl.addEventListener('input', upd); upd();
+      }
+
+      // Prism 하이라이트
+      if (window.Prism) window.Prism.highlightAll();
+    })();
+  </script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

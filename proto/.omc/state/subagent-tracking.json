@@ -1,0 +1,53 @@
+{
+  "agents": [
+    {
+      "agent_id": "a1310e939dfc864af",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-20T06:57:38.576Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-20T07:01:07.709Z",
+      "duration_ms": 209133
+    },
+    {
+      "agent_id": "a46c1d6e74627feb4",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-20T06:57:39.584Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-20T07:03:02.591Z",
+      "duration_ms": 323007
+    },
+    {
+      "agent_id": "aexec-plan-673a50d2ce1fb8af",
+      "agent_type": "exec-plan",
+      "started_at": "2026-07-20T07:54:03.751Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-20T08:07:58.976Z",
+      "duration_ms": 835225
+    },
+    {
+      "agent_id": "aexec-models-6ea7bf4d5c51a797",
+      "agent_type": "exec-models",
+      "started_at": "2026-07-20T07:54:24.649Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-20T08:00:36.975Z",
+      "duration_ms": 372326
+    },
+    {
+      "agent_id": "aexec-meeting-26598a9fc9b5706c",
+      "agent_type": "exec-meeting",
+      "started_at": "2026-07-20T07:54:46.926Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-20T08:05:06.506Z",
+      "duration_ms": 619580
+    }
+  ],
+  "total_spawned": 5,
+  "total_completed": 29,
+  "total_failed": 0,
+  "last_updated": "2026-07-20T08:07:59.086Z"
+}

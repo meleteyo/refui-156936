@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "projectId": "156936",
+    "system": "EDEN OS",
+    "title": "철강 제조/유통사 전용 통합 운영 시스템 구축(품질/환율 관리 포함/CP 중점)",
+    "client": "이든철강 (대구 북구, Built-Up H Beam 제작 + 철강재 유통)",
+    "budget": "60,000,000원",
+    "durationDays": 150,
+    "durationWeeks": 21,
+    "postedAt": "2026-07-15",
+    "deadline": "2026-07-22",
+    "workEnv": "PC 웹 전용 (모바일 비대상)",
+    "sourceUrl": "https://www.wishket.com/project/156936/",
+    "note": "비공개 매칭 · 이전 공고 156923 재게시(CP 강조 목적) · 데이터 소유권 발주사 귀속",
+    "domainAccent": ["indigo", "teal"]
+  },
+  "heroInsights": [
+    { "id": "M1", "title": "절단 최적화의 차원과 양식", "body": "CP가 1D(모재 길이) 커팅스톡인가 2D(강판 플레이트) 네스팅인가, '최적'의 허용 기준, CP 엑셀 양식 확보 시점이 전체 난도·일정을 2~5배 가른다." },
+    { "id": "scope", "title": "범위·예산·일정 정합", "body": "공통+1·2·3차+QMS는 사실상 미니 ERP. 6,000만원/5개월에 일괄인가 차수 분리·MVP 우선인가. 더존 연동은 '설계만'인가 '개발 포함'인가." },
+    { "id": "ops", "title": "배포·이관·운영 조건", "body": "배포 주체(개발사 클라우드 vs 발주사 온프레미스), 데이터 이관 범위, 대구 상주 여부, 미정의 용어 'MCS'가 인프라·설계 범위를 좌우." }
+  ],
+  "core": {
+    "title": "BH Cutting Plan — 1D 커팅스톡 네스팅 최적화",
+    "flow": ["엑셀 업로드(cp1301)", "FLANGE/WEB 전개(702)", "네스팅 최적화(703, 비동기 잡)", "확정·잠금(cp1304)"],
+    "algorithm": "FFD 휴리스틱 + 로컬서치(기본, SolutionType.APPROXIMATE) / OR-Tools CP-SAT(최적 모드, 선택)",
+    "invariant": "각 layout: Σcuts + scrap == mother_bar_length (길이 보존) — assert + DB CHECK",
+    "guard": "확정 CP(is_confirmed)만 수주 확정 허용",
+    "sampleResult": { "yieldRate": 96.2, "totalScrapMm": 8400, "requiredBarCount": 34, "solutionType": "근사", "motherBarLengthMm": 12000 }
+  },
+  "dashboard": {
+    "kpis": [
+      { "label": "진행 중 프로젝트 수주액", "value": 1284500000, "unit": "₩", "deltaPct": 8.4 },
+      { "label": "이번 달 스크랩 절감", "value": 12480000, "unit": "₩" },
+      { "label": "평균 절단 수율", "value": 96.2, "unit": "%", "target": 95.0 },
+      { "label": "손익 건전성", "value": 84, "unit": "/100", "grade": "A-" },
+      { "label": "CP 엑셀 파싱 정확도", "value": 94, "unit": "%" }
+    ],
+    "currencyAllocation": [
+      { "currency": "KRW", "pct": 62 }, { "currency": "JPY", "pct": 18 }, { "currency": "USD", "pct": 8 }, { "currency": "AUD", "pct": 12 }
+    ],
+    "projects": [
+      { "no": "EDN-2026-0031", "customer": "大阪스틸", "country": "일본", "currency": "JPY", "yield": 96.2, "marginPct": 14.2, "status": "생산중" },
+      { "no": "EDN-2026-0029", "customer": "대성건설", "country": "국내", "currency": "KRW", "yield": 97.4, "marginPct": 11.8, "status": "수주확정" },
+      { "no": "EDN-2026-0027", "customer": "Perth Steel", "country": "호주", "currency": "AUD", "yield": 93.1, "marginPct": 9.6, "status": "절단계획" },
+      { "no": "EDN-2026-0024", "customer": "한빛중공업", "country": "국내", "currency": "KRW", "yield": 95.8, "marginPct": 7.2, "status": "정산완료" }
+    ]
+  },
+  "engine": {
+    "title": "프로젝트 원가·손익 평가 엔진",
+    "sample": "EDN-2026-0031 (일본 수출)",
+    "overall": 84, "grade": "A-",
+    "subScores": [
+      { "name": "수율", "score": 96, "explain": "스크랩률 3.8%, 목표 대비 +1.2%p · 잔재 1%p ≈ ₩1,240,000 절감 감도" },
+      { "name": "원가 정합", "score": 88, "explain": "예상(BS1101) 대비 실제 원가 편차 4.1% · 간접비 배부키 표준화" },
+      { "name": "마진", "score": 72, "explain": "예상이익률 14.2% · 원자재비 비중 62%(커머디티 특성상 수율 민감)" },
+      { "name": "환리스크 대비", "score": 79, "explain": "JPY 미수 ¥8.4M, −2% 시 ₩1.5M 손실 노출 · 수금일 스냅샷(BS1104) 평가" },
+      { "name": "납기 준수", "score": 91, "explain": "계획 대비 +2일 이내 · 작업지시 상태기계 추적" }
+    ]
+  },
+  "operator": {
+    "kpis": [
+      { "label": "활성 사용자", "value": 24, "unit": "명", "note": "9개 부서 RBAC" },
+      { "label": "등록 프로젝트", "value": 186, "unit": "건" },
+      { "label": "처리 CP 잡", "value": 342, "unit": "건" },
+      { "label": "API 에러율", "value": 0.1, "unit": "%" }
+    ],
+    "yieldSimulator": { "materialAnnualBillion": 80, "yieldImprovePp": 1.5, "formula": "절감액 = 연간 원자재 투입액 × (수율 개선폭 / 100)" }
+  },
+  "insights": {
+    "ambiguous": [
+      { "id": "M1", "item": "CP 1D vs 2D", "interpA": "모재 바 길이 기준 1D 커팅스톡", "interpB": "강판에서 FLANGE/WEB 2D 네스팅(길로틴·회전)", "impact": "알고리즘 난도·일정 2~5배" },
+      { "id": "M2", "item": "'최적'의 정의·성능 목표", "interpA": "휴리스틱 근사해(수 초)", "interpB": "MILP/CP-SAT 최적(장시간)", "impact": "알고리즘 선택·검증 기준, KPI 부재 시 스코프 무한" },
+      { "id": "M3", "item": "CP 엑셀 양식 구조", "interpA": "단일 표(길이·수량)", "interpB": "다중 시트·명명범위·VBA 수식 체인", "impact": "파서 공수·정합성, 미확보 시 착수 불가" }
+    ],
+    "missing": [
+      { "item": "데이터 마이그레이션", "why": "수년치 엑셀 이관·정합성 검증 — 배경상 필수인데 과업에 없음" },
+      { "item": "감사 로그·변경 이력", "why": "'데이터 누적' 취지상 필요 · audit_logs" },
+      { "item": "알림(수금·미수·클레임·납기)", "why": "운영상 자연 발생, 미명시 · 스케줄러/발송" },
+      { "item": "파일 첨부·저장", "why": "사진대지·성적서 스캔·도면 · S3" },
+      { "item": "검색·필터·페이지네이션", "why": "목록 공통 UX 표준 미명시(암묵)" },
+      { "item": "엑셀 내보내기", "why": "현행 엑셀 사용자 이관 편의 미명시" }
+    ]
+  },
+  "questions": [
+    { "id": "Q1", "priority": "P0", "text": "CP 최적화 차원(1D/2D/혼합)?", "options": "A)1D only B)2D 포함 C)1D+2D", "impact": "2D는 NP-hard·일정 2~5배" },
+    { "id": "Q2", "priority": "P0", "text": "'최적' 정의·성능 목표(근사/최적)?", "options": "A)근사·수초 B)최적·시간무제한 +KPI", "impact": "알고리즘 선택·검증 기준" },
+    { "id": "Q3", "priority": "P0", "text": "BH CP 엑셀 양식 구조 + 제공 시점?", "options": "A)단순표 B)다중시트·매크로", "impact": "파서 공수, 양식=명세" },
+    { "id": "Q6", "priority": "P0", "text": "시험성적서 양식 수 × 국가?", "options": "국가별 종수 + 샘플", "impact": "종수 = 2차 공수 승수" },
+    { "id": "Q7", "priority": "P0", "text": "'MCS' 정의?", "options": "Mill Certificate Sheet / Material Control System / 사내약어", "impact": "생산·품질 ERD 종속" },
+    { "id": "Q8", "priority": "P0", "text": "더존 ERP 연동 범위(설계만/개발 포함)?", "options": "A)설계만 B)개발 포함", "impact": "외부 연동 스코프·일정" },
+    { "id": "Q9", "priority": "P0", "text": "데이터 마이그레이션 범위?", "options": "A)신규 only B)N년 이관", "impact": "ETL·정합성 별도 공수" },
+    { "id": "Q18", "priority": "P0", "text": "배포·호스팅 주체?", "options": "A)개발사 클라우드 B)발주사 온프레미스", "impact": "인프라·CI/CD·운영 이관" },
+    { "id": "Q19", "priority": "P0", "text": "RBAC 권한 매트릭스 제공 가능?", "options": "부서×직급×기능 권한표", "impact": "초기 도메인 뼈대·결재 흐름" },
+    { "id": "Q28", "priority": "P0", "text": "전 범위 일괄 vs 차수 분리?", "options": "A)일괄 B)차수 분리(권장)", "impact": "예산·일정 리스크 공유" }
+  ],
+  "risks": [
+    { "id": "R1", "name": "CP 알고리즘 난도", "cat": "기술/범위", "prob": 3, "impact": 3, "score": 9, "strategy": "완화+회피 — CP 선검증 PoC, 2D·수학적 최적 선택범위 분리" },
+    { "id": "R2", "name": "범위·예산·일정 부적정", "cat": "범위/일정", "prob": 3, "impact": 3, "score": 9, "strategy": "완화 — 차수(1→2→3) 분리 계약, 선택범위 명문 분리" },
+    { "id": "R3", "name": "엑셀 양식 확보 지연", "cat": "양식/데이터", "prob": 3, "impact": 3, "score": 9, "strategy": "완화+회피 — 착수 전제조건 양식 워크숍(반나절) 계약화" },
+    { "id": "R4", "name": "인수·검수 기준 모호", "cat": "계약/커뮤", "prob": 2, "impact": 3, "score": 6, "strategy": "회피 — 정량 검수 기준(수율 오차·응답시간·손익 정합) 부속서" },
+    { "id": "R5", "name": "더존 연동 범위 모호", "cat": "범위", "prob": 2, "impact": 3, "score": 6, "strategy": "회피+전가 — '설계까지, 실연동 별도 계약' 명문화" },
+    { "id": "R6", "name": "QMS 성적서 양식 수 가변", "cat": "범위/기술", "prob": 2, "impact": 3, "score": 6, "strategy": "완화 — 양식 전량 수집 + 종수 상한 합의, 공통필드+JSONB" },
+    { "id": "R7", "name": "단독 수행 버스팩터", "cat": "운영/계약", "prob": 2, "impact": 3, "score": 6, "strategy": "완화 — 차수 분리 부하 평준화, 문서·테스트 상시 산출" },
+    { "id": "R8", "name": "스택 친숙도 갭", "cat": "기술", "prob": 3, "impact": 2, "score": 6, "strategy": "완화 — FastAPI 대안 또는 Django 집중 학습 1주" },
+    { "id": "R9", "name": "데이터 이관 범위", "cat": "양식/데이터", "prob": 2, "impact": 2, "score": 4, "strategy": "전가+회피 — 신규+마스터 기본, 대량 이관 별도 견적" },
+    { "id": "R10", "name": "원가 배부 규칙 미표준", "cat": "기술/범위", "prob": 2, "impact": 2, "score": 4, "strategy": "완화 — 원가분석표 엑셀로 항목·배부키 수식 확정" },
+    { "id": "R11", "name": "신규 클라이언트·의사결정 지연", "cat": "커뮤", "prob": 2, "impact": 2, "score": 4, "strategy": "완화 — 마일스톤 대금, SOW·선택범위표로 기대 정렬" },
+    { "id": "R12", "name": "호스팅 주체 미정", "cat": "운영/기술", "prob": 2, "impact": 2, "score": 4, "strategy": "완화 — Docker Compose 양쪽 대응, Q18 조기 확정" },
+    { "id": "R13", "name": "'MCS' 용어 미정의", "cat": "기술", "prob": 2, "impact": 2, "score": 4, "strategy": "완화 — Q7 즉시 확정 + 샘플" },
+    { "id": "R14", "name": "유지보수·하자보수 범위 미정", "cat": "계약", "prob": 2, "impact": 2, "score": 4, "strategy": "회피 — 하자보수 기간·유상 유지보수 옵션 명문화" },
+    { "id": "R15", "name": "근무방식 미기재(대구 상주)", "cat": "운영/커뮤", "prob": 2, "impact": 1, "score": 2, "strategy": "완화 — 원격+정례 미팅+핵심 마일스톤 방문" },
+    { "id": "R16", "name": "성능·동시성 목표 부재", "cat": "기술", "prob": 1, "impact": 2, "score": 2, "strategy": "수용+완화 — CP 비동기 잡, maxSeconds 상한" },
+    { "id": "R17", "name": "환율 API 정책·'실시간' 갭", "cat": "기술", "prob": 2, "impact": 1, "score": 2, "strategy": "완화 — 무료 API+스냅샷, 평가시점 Q22 확정" },
+    { "id": "R18", "name": "지식 이전·인수인계", "cat": "계약", "prob": 1, "impact": 2, "score": 2, "strategy": "완화 — ERD·API·운영문서 상시 산출, 인수인계 세션" },
+    { "id": "R19", "name": "보안·개인정보·감사 미명시", "cat": "기술", "prob": 1, "impact": 2, "score": 2, "strategy": "완화 — JWT+RBAC+audit_logs 기본, Q19 확정" }
+  ],
+  "riskCascades": [
+    "① CP 축 붕괴: R1 CP 난도↑(2D 판명) → CP PoC 지연 → 설계완료 붕괴 → 전 파이프라인 순연",
+    "② 양식 지연: R3 양식 지연/매크로 → 파서·전개 착수 불가 → CP PoC 지연 → 연쇄①",
+    "③ 범위 과다: R2 미니 ERP → R7 과부하 → R4 검수 분쟁 → 대금 지연 → R11 신뢰 저하"
+  ],
+  "architecture": {
+    "stack": [
+      { "layer": "백엔드", "choice": "Python 3.12 + Django 5 + DRF", "why": "미니 ERP 폭 CRUD·권한·리포트 가속, ERD가 ORM에서 파생", "rejected": "FastAPI(직접 구축)" },
+      { "layer": "비동기", "choice": "Celery + Redis", "why": "CP 최적화·환율 폴링 분리, 잡 제출→폴링→결과", "rejected": "두 번째 프레임워크" },
+      { "layer": "CP 최적화", "choice": "FFD/BFD + 로컬서치 / OR-Tools CP-SAT", "why": "근사 기본, 최적 요구 시 승격", "rejected": "순수 MILP(시간)" },
+      { "layer": "엑셀", "choice": "openpyxl + pandas", "why": "CP·성적서·원가 양식 파싱", "rejected": "-" },
+      { "layer": "DB", "choice": "PostgreSQL 16", "why": "NUMERIC·JSONB+GIN·윈도우함수·더존 확장", "rejected": "MySQL(4항 열위)" },
+      { "layer": "프론트", "choice": "React 18 + TS + Vite · AG Grid · ECharts", "why": "밀집 그리드 편집, PC 웹 전용", "rejected": "모바일/반응형" },
+      { "layer": "PDF", "choice": "WeasyPrint", "why": "한글 폰트·표 안정, 문서 5종", "rejected": "브라우저 print" },
+      { "layer": "인증", "choice": "JWT(SimpleJWT) + 부서/직급 RBAC", "why": "자체 계정, 민감 원가·손익 격리", "rejected": "SSO(선택)" },
+      { "layer": "배포", "choice": "Docker Compose", "why": "개발사 클라우드↔발주사 온프레미스 양쪽", "rejected": "단일 서버" }
+    ],
+    "adrs": [
+      { "id": "ADR-001", "title": "백엔드 = Django + DRF 단일 모놀리스", "detail": "미니 ERP 폭 생산성 최상. FastAPI(B)/마이크로서비스(C) 기각" },
+      { "id": "ADR-002", "title": "CP = FFD 근사 기본, CP-SAT 승격", "detail": "INestingOptimizer 프로토콜 구현 교체만으로 승격. 2D는 선택범위" },
+      { "id": "ADR-003", "title": "DB = PostgreSQL 16 (vs MySQL)", "detail": "NUMERIC·JSONB·윈도우함수·확장 4축 우위" },
+      { "id": "ADR-004", "title": "CP 최적화 = 비동기 잡 큐(Celery)", "detail": "202 job_id → 폴링, maxSeconds 상한 '시간 내 최선해'" },
+      { "id": "ADR-005", "title": "더존 연동 = 확장성 설계만", "detail": "external_ref JSONB 예약 + BusinessDocument 추상 타입" },
+      { "id": "ADR-006", "title": "도메인 = 프레임워크 비의존 순수함수", "detail": "behaviors.py 순수함수, ProjectStateMachine is_confirmed 가드" }
+    ],
+    "codePreview": "domain/behaviors.py :: optimize_cutting_plan (1D 커팅스톡 FFD, 길이보존 불변식)"
+  },
+  "timeline": {
+    "totalWeeks": 21,
+    "phases": [
+      { "phase": 1, "weeks": "W1~W6.5", "name": "공통 기반 + CP PoC", "color": "purple" },
+      { "phase": 2, "weeks": "W7~W11", "name": "1차 수주·발주", "color": "pink" },
+      { "phase": 3, "weeks": "W12~W15", "name": "2차 생산·품질·유통", "color": "emerald" },
+      { "phase": 4, "weeks": "W16~W19.5", "name": "3차 자금·손익 + 통합", "color": "cyan" }
+    ],
+    "milestones": [
+      { "id": "M1", "label": "기획·설계 완료(1.5개월) · CP PoC 수율 재현", "week": 6.5 },
+      { "id": "1차검수", "label": "프로젝트~CP~발주서 E2E", "week": 11 },
+      { "id": "M2", "label": "개발 완료(3.5개월) · 2차 검수", "week": 15 },
+      { "id": "3차검수", "label": "자금·손익·대시보드", "week": 18 },
+      { "id": "M3", "label": "통합테스트·오픈(4.5개월)", "week": 19.5 }
+    ]
+  },
+  "whyUs": [
+    { "title": "깊은 요구분석 (모호 M1–M11 도출·EPM 산출물)", "ours": true, "others": "일반 재해석" },
+    { "title": "RSM 도메인 코드화 (21 Object → ERD·API·상태기계)", "ours": true, "others": false },
+    { "title": "CP 선검증 PoC (1주 내 FFD 수율 재현)", "ours": true, "others": "'경험 있다' 주장" },
+    { "title": "차수 분리 계약 (예산·일정 리스크 공유)", "ours": true, "others": "일괄 고정가" },
+    { "title": "리스크 19개 + 연쇄(cascade) 분석", "ours": true, "others": false },
+    { "title": "AI 래피드 프로토타이핑 (1주 내 동작 화면)", "ours": true, "others": "문서만" }
+  ],
+  "credentials": { "experienceYears": 22, "projects": "32+", "rsmObjects": 21, "adrCount": 6, "honestGap": "철강/CP/네스팅/생산계획 도메인 경험 없음 — CP 조기 PoC로 증명" },
+  "cta": {
+    "roiCalculator": { "id": "roi-trades", "label": "월 절단계획(CP) 수립 횟수", "assumptionMinutesPerCp": 20, "hourlyWage": 50000 },
+    "trustBadges": ["무상 하자보수", "매주 진행 보고", "대구 방문 협의 가능", "22년 경력"],
+    "wishketUrl": "https://www.wishket.com/project/156936/"
+  },
+  "links": {
+    "landing": "./index.html",
+    "it": "./it.html",
+    "nonit": "./nonit.html",
+    "liveDemo": "../proto/index.html",
+    "autoDemo": "../demo/자동시연.html"
+  }
+}
